@@ -1,8 +1,8 @@
 # Node powerup reference
 
 Type: research
-Status: needs-info
+Status: resolved
 
 What are the node-like powerups?
 
-Describe the reference game or mechanic, the kinds of powerups expected, how the player finds or activates them, and whether nodes are physical objects, abilities, upgrade cards, or something else.
+Decision: nodes are physical powerup pickups in the arena. Ember improves casting, Hollow improves movement, Crown doubles essence rewards, and Aegis expands vitality. Nodes are collected by moving over them; level ascension also offers a choice between node upgrades.

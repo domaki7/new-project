@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ascendant Nodes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app">
+    <header class="hud">
+      <div class="brand"><span class="brand-glyph">✦</span><div><p class="eyebrow">REINCARNATION LOG / 001</p><h1>ASCENDANT NODES</h1></div></div>
+      <div class="hud-stats"><div><span class="label">VESSEL</span><strong id="levelValue">01</strong></div><div><span class="label">ESSENCE</span><strong id="essenceValue">000</strong></div><div><span class="label">WAVE</span><strong id="waveValue">01 / 05</strong></div></div>
+    </header>
+    <section class="arena-shell">
+      <div class="arena-topline"><span>THE LOWER REALM</span><span id="statusValue">AWAKEN THE VESSEL</span></div>
+      <div class="arena-frame"><canvas id="gameCanvas" aria-label="Top-down Ascendant Nodes arena"></canvas><div id="startOverlay" class="overlay"><p class="eyebrow">THE OLD GOD IS DEAD</p><h2>Become the next one.</h2><p>Move through the realm, destroy void creatures, and collect nodes to rewrite your form.</p><button id="startButton">Enter the lower realm <span>→</span></button><small>WASD / ARROWS TO MOVE · MOUSE TO AIM · CLICK TO CAST</small></div><div id="levelOverlay" class="overlay hidden"><p class="eyebrow">ASCENSION AVAILABLE</p><h2>Choose a node.</h2><div id="upgradeChoices" class="upgrade-choices"></div></div><div id="deathOverlay" class="overlay hidden"><p class="eyebrow">VESSEL LOST</p><h2>The realm remains.</h2><p id="deathCopy">Your essence fades into the dark.</p><button id="restartButton">Reincarnate <span>↻</span></button></div></div>
+      <div class="arena-bottom"><div class="health"><span class="label">VITALITY</span><div class="bar"><i id="healthBar"></i></div></div><div class="node-readout"><span class="label">ACTIVE NODES</span><div id="nodePills"><span class="empty-pill">NONE</span></div></div><div class="cooldown"><span class="label">CAST</span><strong id="cooldownValue">READY</strong></div></div>
+    </section>
+    <footer><span>ORIGINAL TOP-DOWN ACTION RPG PROTOTYPE</span><span>BUILD 0.1.0</span></footer>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>

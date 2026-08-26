@@ -8,6 +8,7 @@
 - Use Wayfinder before implementing the replacement game.
 - Preserve the repository's local Markdown issue workflow.
 - Build an original top-down action RPG about reincarnation, node powers, and ascension.
+- First playable project is named Ascendant Nodes and uses a browser-first vanilla stack.
 
 ## Fog
 - What is the game fantasy and genre?
@@ -16,6 +17,7 @@
 - Is the browser demo a faithful slice of the desktop game or only a concept test?
 - Which GitHub repository should host the project?
 - What is the first playable combat and progression slice?
+- Expand the first slice with authored enemy types, more node interactions, and persistent ascension progression.
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

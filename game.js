@@ -152,10 +152,10 @@ function drawEquippedWeapons() {
   if (!player || !equipped.length) return;
   ctx.save(); ctx.translate(player.x, player.y);
   equipped.filter(id => weapons[id]).forEach((id, index) => {
-    const weapon = weapons[id]; const angle = (index / equipped.length) * Math.PI * 2 - Math.PI / 2; const radius = 39 + Math.min(index, 3) * 5;
+    const weapon = weapons[id]; const orbitAngle = (index / equipped.length) * Math.PI * 2 - Math.PI / 2; const angle = id === 'blade' && meleeFlash > 0 ? meleeAngle - 1.05 + (1 - meleeFlash / .2) * 2.1 : orbitAngle; const radius = id === 'blade' && meleeFlash > 0 ? 18 : 39 + Math.min(index, 3) * 5;
     const x = Math.cos(angle) * radius; const y = Math.sin(angle) * radius;
     ctx.save(); ctx.translate(x, y); ctx.rotate(angle + Math.PI / 2); ctx.strokeStyle = weapon.color; ctx.fillStyle = `${weapon.color}cc`; ctx.lineWidth = 3;
-    if (id === 'blade') { ctx.beginPath(); ctx.moveTo(-5, 15); ctx.lineTo(0, -17); ctx.lineTo(5, 15); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-10, 8); ctx.lineTo(10, 8); ctx.stroke(); }
+    if (id === 'blade') { ctx.beginPath(); ctx.moveTo(-6, 10); ctx.lineTo(0, -52); ctx.lineTo(6, 10); ctx.closePath(); ctx.fillStyle = '#dbe6df'; ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-13, 9); ctx.lineTo(13, 9); ctx.strokeStyle = '#edc968'; ctx.lineWidth = 5; ctx.stroke(); ctx.beginPath(); ctx.moveTo(-4, 10); ctx.lineTo(4, 10); ctx.strokeStyle = '#7d9693'; ctx.lineWidth = 4; ctx.stroke(); if (meleeFlash > 0) { ctx.beginPath(); ctx.arc(0, 0, 58, -1.05, 1.05); ctx.strokeStyle = '#fff1b0'; ctx.lineWidth = 3; ctx.globalAlpha = meleeFlash / .2; ctx.stroke(); } }
     else if (id === 'bolt') { ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(7, 11); ctx.lineTo(0, 7); ctx.lineTo(-7, 11); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     else if (id === 'nova') { ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill(); }
     else if (id === 'chain') { ctx.beginPath(); ctx.arc(0, -7, 7, 0, Math.PI * 2); ctx.arc(0, 8, 7, 0, Math.PI * 2); ctx.stroke(); }

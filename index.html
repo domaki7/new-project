@@ -9,13 +9,13 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <style>.auto-badge{display:inline-block;margin-right:10px;padding:4px 6px;color:#173238;background:#63d1c2;font:500 9px "DM Mono",monospace;letter-spacing:.08em}#gameCanvas{cursor:crosshair}</style>
-  <style>body{background:#c8d1c8}.arena-frame{background:#111b2d;background-image:radial-gradient(circle at 50% 50%,#31466e55,transparent 48%)}.arena-frame:after{background:linear-gradient(135deg,#edc96818,transparent 30%),radial-gradient(circle at 50% 50%,#63d1c218,transparent 56%)}.brand-glyph{color:#edc968;box-shadow:inset 0 0 0 2px #edc96855}.overlay{background:#0b1425e8}.hud h1{font-size:28px;letter-spacing:-.08em;text-shadow:2px 2px 0 #edc96855}.arena-shell{border-color:#637f79;box-shadow:0 24px 70px #16203440}.arena-topline{border-bottom:1px solid #b6c9ba}.node-pill{box-shadow:0 0 14px currentColor;background:#17263a}</style>
+  <style>body{background:#c8d1c8}.arena-frame{background:#111b2d;background-image:radial-gradient(circle at 50% 50%,#31466e55,transparent 48%)}.arena-frame:after{background:linear-gradient(135deg,#edc96818,transparent 30%),radial-gradient(circle at 50% 50%,#63d1c218,transparent 56%)}.brand-glyph{color:#edc968;box-shadow:inset 0 0 0 2px #edc96855}.overlay{background:#0b1425e8}.hud h1{font-size:28px;letter-spacing:-.08em;text-shadow:2px 2px 0 #edc96855}.arena-shell{border-color:#637f79;box-shadow:0 24px 70px #16203440}.arena-topline{border-bottom:1px solid #b6c9ba}.node-pill{box-shadow:0 0 14px currentColor;background:#17263a}.restart-game{padding:7px 9px;border:1px solid #637f79;color:#172326;background:transparent;cursor:pointer;font:500 9px "DM Mono",monospace;letter-spacing:.08em;text-transform:uppercase}.restart-game:hover{border-color:#ed725c;color:#ed725c}</style>
 </head>
 <body>
   <main class="app">
     <header class="hud">
       <div class="brand"><span class="brand-glyph">✦</span><div><p class="eyebrow">ASCENSION LOG / 001</p><h1>CROWN OF THE ABSOLUTE</h1></div></div>
-      <div class="hud-stats"><div><span class="label">VESSEL</span><strong id="levelValue">01</strong></div><div><span class="label">ESSENCE</span><strong id="essenceValue">000</strong></div><div><span class="label">WAVE</span><strong id="waveValue">01 / 05</strong></div></div>
+      <div class="hud-stats"><div><span class="label">VESSEL</span><strong id="levelValue">01</strong></div><div><span class="label">ESSENCE</span><strong id="essenceValue">000</strong></div><div><span class="label">WAVE</span><strong id="waveValue">01 / 05</strong></div><button id="restartGameButton" class="restart-game" type="button">Restart game</button></div>
     </header>
     <section class="arena-shell">
       <div class="arena-topline"><span>THE LOWER REALM</span><span><b class="auto-badge">AUTO-CAST</b><span id="statusValue">AUTO-CAST ONLINE / AWAKEN THE VESSEL</span></span></div>

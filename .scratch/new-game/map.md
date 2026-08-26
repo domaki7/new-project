@@ -34,6 +34,7 @@
 - Slow ascension choices to 240 essence initially, then add 190 essence per level.
 - Allow duplicate weapon nodes to evolve individual weapon ranks and auto-cast damage.
 - Start runs unarmed, lock the build family after the first weapon pickup, and label floor relics clearly.
+- Allow five distinct weapons to remain equipped and auto-casting together; duplicates rank up existing weapons.
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

@@ -105,6 +105,21 @@ function update(dt) {
   projectiles = projectiles.filter(projectile => projectile.life > 0); enemyProjectiles.forEach(projectile => { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; if (distance(projectile, player) < projectile.r + player.r) { damagePlayer(projectile.damage); projectile.life = 0; } }); enemyProjectiles = enemyProjectiles.filter(projectile => projectile.life > 0); enemies = enemies.filter(enemy => { if (enemy.hp <= 0) { essence += enemy.essence; addParticles(enemy.x, enemy.y, enemyTypes[enemy.type].color, 8); if (essence >= level * 100) offerUpgrade(); return false; } return true; });
   nodes.forEach(node => { node.life -= dt; if (distance(node, player) < node.r + player.r) collectNode(node); }); nodes = nodes.filter(node => node.life > 0); particles.forEach(particle => { particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.life -= dt; }); particles = particles.filter(particle => particle.life > 0); if (enemies.length > 10 + wave * 3) wave = Math.min(5, wave + 1); updateHud();
 }
+function drawEquippedWeapons() {
+  if (!player || !equipped.length) return;
+  ctx.save(); ctx.translate(player.x, player.y);
+  equipped.forEach((id, index) => {
+    const weapon = weapons[id]; const angle = (index / equipped.length) * Math.PI * 2 - Math.PI / 2; const radius = 39 + Math.min(index, 3) * 5;
+    const x = Math.cos(angle) * radius; const y = Math.sin(angle) * radius;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(angle + Math.PI / 2); ctx.strokeStyle = weapon.color; ctx.fillStyle = `${weapon.color}cc`; ctx.lineWidth = 3;
+    if (id === 'blade') { ctx.beginPath(); ctx.moveTo(-5, 15); ctx.lineTo(0, -17); ctx.lineTo(5, 15); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-10, 8); ctx.lineTo(10, 8); ctx.stroke(); }
+    else if (id === 'bolt') { ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(7, 11); ctx.lineTo(0, 7); ctx.lineTo(-7, 11); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else if (id === 'nova') { ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill(); }
+    else if (id === 'chain') { ctx.beginPath(); ctx.arc(0, -7, 7, 0, Math.PI * 2); ctx.arc(0, 8, 7, 0, Math.PI * 2); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.moveTo(0, -17); ctx.lineTo(9, 6); ctx.lineTo(0, 14); ctx.lineTo(-9, 6); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    ctx.restore();
+  }); ctx.restore();
+}
 function draw() {
   const w = frame.clientWidth; const h = frame.clientHeight; ctx.clearRect(0, 0, w, h); ctx.strokeStyle = '#ffffff0b';
   for (let x = 0; x < w; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
@@ -114,6 +129,7 @@ function draw() {
   enemies.forEach(enemy => { const type = enemyTypes[enemy.type]; ctx.save(); ctx.translate(enemy.x, enemy.y); ctx.rotate(Math.atan2(player.y - enemy.y, player.x - enemy.x)); ctx.beginPath(); ctx.moveTo(enemy.r + 7, 0); ctx.lineTo(0, enemy.r); ctx.lineTo(-enemy.r * .8, 0); ctx.lineTo(0, -enemy.r); ctx.closePath(); ctx.fillStyle = '#0b171d'; ctx.fill(); ctx.strokeStyle = type.color; ctx.lineWidth = enemy.type === 'regent' ? 4 : 3; ctx.stroke(); ctx.fillStyle = type.color; ctx.fillRect(enemy.r * .2, -5, 5, 5); ctx.fillRect(enemy.r * .2, 1, 5, 5); ctx.restore(); ctx.fillStyle = '#ed725c'; ctx.fillRect(enemy.x - enemy.r, enemy.y - enemy.r - 9, enemy.r * 2 * Math.max(0, enemy.hp / enemy.maxHp), 4); });
   particles.forEach(particle => { ctx.globalAlpha = Math.max(0, particle.life * 2); ctx.beginPath(); ctx.arc(particle.x, particle.y, 3, 0, Math.PI * 2); ctx.fillStyle = particle.color; ctx.fill(); ctx.globalAlpha = 1; });
   if (player) { ctx.globalAlpha = invulnerable > 0 && Math.floor(Date.now() / 80) % 2 ? .35 : 1; ctx.save(); ctx.translate(player.x, player.y); ctx.beginPath(); ctx.moveTo(0, -player.r - 13); ctx.lineTo(player.r + 9, -player.r + 2); ctx.lineTo(player.r - 2, player.r + 15); ctx.lineTo(-player.r - 2, player.r + 15); ctx.lineTo(-player.r - 9, -player.r + 2); ctx.closePath(); ctx.fillStyle = '#b9c8c2'; ctx.fill(); ctx.strokeStyle = '#edc968'; ctx.lineWidth = 3; ctx.stroke(); ctx.beginPath(); ctx.moveTo(-player.r - 6, -player.r - 8); ctx.lineTo(0, -player.r - 20); ctx.lineTo(player.r + 6, -player.r - 8); ctx.strokeStyle = '#edc968'; ctx.lineWidth = 4; ctx.stroke(); ctx.fillStyle = '#172326'; ctx.fillRect(-5, -3, 3, 7); ctx.fillRect(2, -3, 3, 7); ctx.restore(); ctx.globalAlpha = 1; }
+  drawEquippedWeapons();
 }
 canvas.addEventListener('mousemove', event => { const bounds = canvas.getBoundingClientRect(); mouse.x = event.clientX - bounds.left; mouse.y = event.clientY - bounds.top; });
 window.addEventListener('keydown', event => keys.add(event.key.toLowerCase())); window.addEventListener('keyup', event => keys.delete(event.key.toLowerCase()));

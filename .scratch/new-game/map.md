@@ -25,6 +25,7 @@
 - Increase challenge with faster spawns, stronger wave scaling, reduced starting vitality, and harsher contact pressure.
 - Add ranged Oracle enemies that retreat and fire projectiles, forcing active movement.
 - Use an original dark-fantasy royal visual direction with a crowned knight vessel, monster silhouettes, and relic-shaped nodes.
+- Show every equipped weapon as a distinct orbiting relic on the knight so power growth is visible in play.
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

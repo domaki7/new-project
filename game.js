@@ -55,7 +55,7 @@ function distance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function nearestEnemy() { return enemies.reduce((nearest, enemy) => !nearest || distance(enemy, player) < distance(nearest, player) ? enemy : nearest, null); }
 function reset() {
   resize(); level = 1; essence = 0; wave = 1; equipped = ['bolt']; enemies = []; projectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0;
-  player = { x: frame.clientWidth / 2, y: frame.clientHeight / 2, r: 16, hp: 100, maxHp: 100, speed: 220, damage: 22 };
+  player = { x: frame.clientWidth / 2, y: frame.clientHeight / 2, r: 16, hp: 85, maxHp: 85, speed: 220, damage: 22 };
   startOverlay.classList.add('hidden'); deathOverlay.classList.add('hidden'); levelOverlay.classList.add('hidden'); running = true; statusValue.textContent = 'AUTO-CAST ONLINE / CLAIM YOUR CROWN'; updateHud();
 }
 function updateHud() {
@@ -67,7 +67,7 @@ function spawnEnemy() {
   const side = Math.floor(Math.random() * 4); const w = frame.clientWidth; const h = frame.clientHeight;
   const x = side % 2 ? Math.random() * w : side === 0 ? -35 : w + 35; const y = side % 2 ? side === 1 ? -35 : h + 35 : Math.random() * h;
   const roll = Math.random(); const type = wave >= 5 && roll < .08 ? 'regent' : roll < .16 ? 'brute' : roll < .34 ? 'charger' : roll < .5 ? 'splitter' : roll < .66 ? 'leech' : 'wisp'; const base = enemyTypes[type];
-  enemies.push({ x, y, type, r: base.r, hp: base.hp + wave * 8, maxHp: base.hp + wave * 8, speed: base.speed + wave * 2, damage: base.damage, essence: base.essence });
+  enemies.push({ x, y, type, r: base.r, hp: base.hp + wave * 14, maxHp: base.hp + wave * 14, speed: base.speed + wave * 4, damage: base.damage, essence: base.essence });
 }
 function spawnNode() { const ids = Object.keys(weapons).filter(id => !equipped.includes(id)); if (!ids.length) return; const type = ids[Math.floor(Math.random() * ids.length)]; nodes.push({ x: 70 + Math.random() * (frame.clientWidth - 140), y: 70 + Math.random() * (frame.clientHeight - 140), r: 17, type, life: 25 }); }
 function addParticles(x, y, color, amount = 5) { for (let i = 0; i < amount; i++) particles.push({ x, y, vx: (Math.random() - .5) * 150, vy: (Math.random() - .5) * 150, life: .45, color }); }
@@ -97,8 +97,8 @@ function offerUpgrade() {
 function update(dt) {
   if (!running) return; let dx = (keys.has('d') || keys.has('arrowright')) - (keys.has('a') || keys.has('arrowleft')); let dy = (keys.has('s') || keys.has('arrowdown')) - (keys.has('w') || keys.has('arrowup')); const magnitude = Math.hypot(dx, dy) || 1;
   player.x = Math.max(player.r, Math.min(frame.clientWidth - player.r, player.x + dx / magnitude * player.speed * dt)); player.y = Math.max(player.r, Math.min(frame.clientHeight - player.r, player.y + dy / magnitude * player.speed * dt)); invulnerable = Math.max(0, invulnerable - dt); spawnTimer -= dt;
-  if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = Math.max(.3, 1.15 - wave * .1); } if (Math.random() < dt * .16 && nodes.length < 4) spawnNode(); autoCast(dt);
-  enemies.forEach(enemy => { const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x); enemy.x += Math.cos(angle) * enemy.speed * dt; enemy.y += Math.sin(angle) * enemy.speed * dt; if (enemy.type === 'leech' && Math.random() < dt * .3) player.hp = Math.max(1, player.hp - .5); if (distance(enemy, player) < enemy.r + player.r) damagePlayer(enemy.damage * dt); if (enemy.type === 'splitter' && Math.random() < dt * .04 && enemies.length < 18) enemies.push({ ...enemy, type: 'wisp', r: 10, hp: 20, maxHp: 20, speed: 62, x: enemy.x + 20, y: enemy.y + 20 }); });
+  if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = Math.max(.18, .9 - wave * .12); } if (Math.random() < dt * .12 && nodes.length < 4) spawnNode(); autoCast(dt);
+  enemies.forEach(enemy => { const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x); enemy.x += Math.cos(angle) * enemy.speed * dt; enemy.y += Math.sin(angle) * enemy.speed * dt; if (enemy.type === 'leech' && Math.random() < dt * .3) player.hp = Math.max(1, player.hp - .7); if (distance(enemy, player) < enemy.r + player.r) damagePlayer(enemy.damage * dt * 1.25); if (enemy.type === 'splitter' && Math.random() < dt * .05 && enemies.length < 22) enemies.push({ ...enemy, type: 'wisp', r: 10, hp: 26 + wave * 4, maxHp: 26 + wave * 4, speed: 70 + wave * 3, x: enemy.x + 20, y: enemy.y + 20 }); });
   projectiles.forEach(projectile => { if (projectile.impact) { projectile.life -= dt; if (projectile.life < .35) enemies.filter(enemy => distance(enemy, projectile) < projectile.r).forEach(enemy => enemy.hp -= projectile.damage * dt * 3); } else { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; enemies.forEach(enemy => { if (distance(enemy, projectile) < enemy.r + projectile.r) { enemy.hp -= projectile.damage; if (!projectile.pierce) projectile.life = 0; addParticles(enemy.x, enemy.y, projectile.color, 4); } }); } });
   projectiles = projectiles.filter(projectile => projectile.life > 0); enemies = enemies.filter(enemy => { if (enemy.hp <= 0) { essence += enemy.essence; addParticles(enemy.x, enemy.y, enemyTypes[enemy.type].color, 8); if (essence >= level * 100) offerUpgrade(); return false; } return true; });
   nodes.forEach(node => { node.life -= dt; if (distance(node, player) < node.r + player.r) collectNode(node); }); nodes = nodes.filter(node => node.life > 0); particles.forEach(particle => { particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.life -= dt; }); particles = particles.filter(particle => particle.life > 0); if (enemies.length > 10 + wave * 3) wave = Math.min(5, wave + 1); updateHud();

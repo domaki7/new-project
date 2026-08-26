@@ -22,6 +22,7 @@
 - Build weapon-combination choices around melee, ranged, area, chain, and impact node weapons.
 - Equip multiple auto-cast weapons with pair synergies and varied enemy counter-pressure.
 - Build toward a rare Dread Regent elite in wave five as a combat climax.
+- Increase challenge with faster spawns, stronger wave scaling, reduced starting vitality, and harsher contact pressure.
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

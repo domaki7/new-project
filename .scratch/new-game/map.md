@@ -21,6 +21,7 @@
 - Expand the first slice with authored enemy types, more node interactions, and persistent ascension progression.
 - Build weapon-combination choices around melee, ranged, area, chain, and impact node weapons.
 - Equip multiple auto-cast weapons with pair synergies and varied enemy counter-pressure.
+- Build toward a rare Dread Regent elite in wave five as a combat climax.
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

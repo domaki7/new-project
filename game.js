@@ -26,7 +26,8 @@ const enemyTypes = {
   brute: { color: '#ed725c', r: 24, hp: 135, speed: 25, damage: 14, essence: 28 },
   charger: { color: '#edc968', r: 15, hp: 55, speed: 105, damage: 11, essence: 18 },
   splitter: { color: '#a98cff', r: 17, hp: 75, speed: 42, damage: 8, essence: 20 },
-  leech: { color: '#ff9b52', r: 13, hp: 42, speed: 68, damage: 9, essence: 16 }
+  leech: { color: '#ff9b52', r: 13, hp: 42, speed: 68, damage: 9, essence: 16 },
+  regent: { color: '#f2f0d0', r: 34, hp: 520, speed: 19, damage: 28, essence: 140 }
 };
 let player;
 let enemies = [];
@@ -65,7 +66,7 @@ function updateHud() {
 function spawnEnemy() {
   const side = Math.floor(Math.random() * 4); const w = frame.clientWidth; const h = frame.clientHeight;
   const x = side % 2 ? Math.random() * w : side === 0 ? -35 : w + 35; const y = side % 2 ? side === 1 ? -35 : h + 35 : Math.random() * h;
-  const roll = Math.random(); const type = roll < .16 ? 'brute' : roll < .34 ? 'charger' : roll < .5 ? 'splitter' : roll < .66 ? 'leech' : 'wisp'; const base = enemyTypes[type];
+  const roll = Math.random(); const type = wave >= 5 && roll < .08 ? 'regent' : roll < .16 ? 'brute' : roll < .34 ? 'charger' : roll < .5 ? 'splitter' : roll < .66 ? 'leech' : 'wisp'; const base = enemyTypes[type];
   enemies.push({ x, y, type, r: base.r, hp: base.hp + wave * 8, maxHp: base.hp + wave * 8, speed: base.speed + wave * 2, damage: base.damage, essence: base.essence });
 }
 function spawnNode() { const ids = Object.keys(weapons).filter(id => !equipped.includes(id)); if (!ids.length) return; const type = ids[Math.floor(Math.random() * ids.length)]; nodes.push({ x: 70 + Math.random() * (frame.clientWidth - 140), y: 70 + Math.random() * (frame.clientHeight - 140), r: 17, type, life: 25 }); }

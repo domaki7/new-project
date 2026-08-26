@@ -15,31 +15,31 @@ const cooldownValue = document.querySelector('#cooldownValue');
 const keys = new Set();
 const mouse = { x: 0, y: 0 };
 const weapons = {
-  blade: { name: 'VOID BLADE', color: '#ed725c', text: 'slashes the nearest enemy', cooldown: .8 },
-  bolt: { name: 'STAR BOLT', color: '#edc968', text: 'fires a piercing projectile', cooldown: .32 },
-  nova: { name: 'GRAVITY NOVA', color: '#63d1c2', text: 'bursts around the vessel', cooldown: 1.5 },
-  chain: { name: 'SOUL CHAIN', color: '#a98cff', text: 'jumps between nearby enemies', cooldown: 1.1 },
-  meteor: { name: 'ROYAL METEOR', color: '#ff9b52', text: 'calls down a heavy impact', cooldown: 2.2 },
-  frost: { name: 'FROST LANCE', color: '#9fd6ff', text: 'slows enemies with crystal bolts', cooldown: .65 },
-  venom: { name: 'VENOM ORB', color: '#8ed66b', text: 'poisons enemies over time', cooldown: .9 },
-  storm: { name: 'STORM SIGIL', color: '#d5b4ff', text: 'strikes several nearby enemies', cooldown: 1.3 }
+  blade: { name: 'VOID BLADE', family: 'melee', color: '#ed725c', text: 'slashes the nearest enemy', cooldown: .8 },
+  bolt: { name: 'STAR BOLT', family: 'ranged', color: '#edc968', text: 'fires a piercing projectile', cooldown: .32 },
+  nova: { name: 'GRAVITY NOVA', family: 'melee', color: '#63d1c2', text: 'bursts around the vessel', cooldown: 1.5 },
+  chain: { name: 'SOUL CHAIN', family: 'melee', color: '#a98cff', text: 'jumps between nearby enemies', cooldown: 1.1 },
+  meteor: { name: 'ROYAL METEOR', family: 'ranged', color: '#ff9b52', text: 'calls down a heavy impact', cooldown: 2.2 },
+  frost: { name: 'FROST LANCE', family: 'ranged', color: '#9fd6ff', text: 'slows enemies with crystal bolts', cooldown: .65 },
+  venom: { name: 'VENOM ORB', family: 'ranged', color: '#8ed66b', text: 'poisons enemies over time', cooldown: .9 },
+  storm: { name: 'STORM SIGIL', family: 'ranged', color: '#d5b4ff', text: 'strikes several nearby enemies', cooldown: 1.3 }
 };
 const upgradeTypes = {
-  damage: { name: 'WAR BLESSING', color: '#ed725c', text: '+25% weapon damage' },
-  haste: { name: 'QUICKENED RITE', color: '#edc968', text: '-18% weapon cooldowns' },
-  vitality: { name: 'IRON SOUL', color: '#9fd6ff', text: '+35 maximum vitality' },
-  magnet: { name: 'GRAVITY HAND', color: '#63d1c2', text: 'collect nodes from farther away' },
-  mastery: { name: 'ARSENAL MASTERY', color: '#a98cff', text: '+18% damage for every equipped weapon' },
-  critical: { name: 'EXECUTIONER RITE', color: '#f2f0d0', text: '15% chance to deal double damage' },
-  regeneration: { name: 'BLOOD OF STARS', color: '#ff9b52', text: 'regenerate 2 vitality each second' },
-  ward: { name: 'CROWNWARD', color: '#9fd6ff', text: 'extend damage invulnerability' }
+  damage: { name: 'WAR BLESSING', family: 'melee', color: '#ed725c', text: '+25% melee weapon damage' },
+  haste: { name: 'QUICKENED RITE', family: 'ranged', color: '#edc968', text: '-18% ranged weapon cooldowns' },
+  vitality: { name: 'IRON SOUL', family: 'melee', color: '#9fd6ff', text: '+35 maximum vitality' },
+  magnet: { name: 'GRAVITY HAND', family: 'ranged', color: '#63d1c2', text: 'collect ranged nodes from farther away' },
+  mastery: { name: 'ARSENAL MASTERY', family: 'melee', color: '#a98cff', text: '+18% damage for every melee weapon' },
+  critical: { name: 'EXECUTIONER RITE', family: 'ranged', color: '#f2f0d0', text: '15% chance for ranged attacks to deal double damage' },
+  regeneration: { name: 'BLOOD OF STARS', family: 'melee', color: '#ff9b52', text: 'regenerate 2 vitality each second' },
+  ward: { name: 'CROWNWARD', family: 'ranged', color: '#9fd6ff', text: 'extend damage invulnerability' }
 };
 const nodeUpgrades = {
-  critical: { name: 'EXECUTIONER RUNE', color: '#f2f0d0', text: '15% chance to deal double damage' },
-  regeneration: { name: 'BLOOD RUNE', color: '#ff9b52', text: 'regenerate 2 vitality each second' },
-  ward: { name: 'WARD RUNE', color: '#9fd6ff', text: 'extend damage invulnerability' },
-  magnet: { name: 'GRAVITY RUNE', color: '#63d1c2', text: 'collect nodes from farther away' },
-  vitality: { name: 'IRON RUNE', color: '#b9c8c2', text: '+35 maximum vitality' }
+  critical: { name: 'EXECUTIONER RUNE', family: 'ranged', color: '#f2f0d0', text: '15% chance to deal double damage' },
+  regeneration: { name: 'BLOOD RUNE', family: 'melee', color: '#ff9b52', text: 'regenerate 2 vitality each second' },
+  ward: { name: 'WARD RUNE', family: 'ranged', color: '#9fd6ff', text: 'extend damage invulnerability' },
+  magnet: { name: 'GRAVITY RUNE', family: 'ranged', color: '#63d1c2', text: 'collect ranged nodes from farther away' },
+  vitality: { name: 'IRON RUNE', family: 'melee', color: '#b9c8c2', text: '+35 maximum vitality' }
 };
 const enemyTypes = {
   wisp: { color: '#63d1c2', r: 12, hp: 30, speed: 54, damage: 7, essence: 10 },
@@ -57,6 +57,7 @@ let enemyProjectiles = [];
 let nodes = [];
 let particles = [];
 let equipped = [];
+let weaponFamily = null;
 let weaponRanks = {};
 let level = 1;
 let essence = 0;
@@ -88,14 +89,15 @@ function distance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function nearestEnemy() { return enemies.reduce((nearest, enemy) => !nearest || distance(enemy, player) < distance(nearest, player) ? enemy : nearest, null); }
 function ascensionThreshold() { return 240 + (level - 1) * 190; }
 function reset() {
-  resize(); level = 1; essence = 0; wave = 1; equipped = ['bolt']; weaponRanks = { bolt: 1 }; enemies = []; projectiles = []; enemyProjectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0; pickupRange = 34; damageMultiplier = 1; cooldownMultiplier = 1; masteryMultiplier = 1; criticalChance = 0; regeneration = 0; wardDuration = .7; meleeFlash = 0;
+  resize(); level = 1; essence = 0; wave = 1; equipped = []; weaponRanks = {}; weaponFamily = null; enemies = []; projectiles = []; enemyProjectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0; pickupRange = 34; damageMultiplier = 1; cooldownMultiplier = 1; masteryMultiplier = 1; criticalChance = 0; regeneration = 0; wardDuration = .7; meleeFlash = 0;
   player = { x: frame.clientWidth / 2, y: frame.clientHeight / 2, r: 16, hp: 85, maxHp: 85, speed: 220, damage: 22 };
+  nodes.push({ x: player.x + 72, y: player.y, r: 17, type: Math.random() < .5 ? 'blade' : 'bolt', life: 40 });
   startOverlay.classList.add('hidden'); deathOverlay.classList.add('hidden'); levelOverlay.classList.add('hidden'); running = true; statusValue.textContent = 'AUTO-CAST ONLINE / CLAIM YOUR CROWN'; updateHud();
 }
 function updateHud() {
   levelValue.textContent = String(level).padStart(2, '0'); essenceValue.textContent = String(essence).padStart(3, '0'); waveValue.textContent = `0${wave} / 05`; healthBar.style.width = `${Math.max(0, player.hp / player.maxHp * 100)}%`;
   nodePills.innerHTML = equipped.map(id => { const item = weapons[id] || nodeUpgrades[id]; const rank = weapons[id] ? ` · RANK ${weaponRanks[id] || 1}` : ''; return `<span class="node-pill" style="border-color:${item.color};color:${item.color}">${item.name}${rank}</span>`; }).join('');
-  const weaponIds = equipped.filter(id => weapons[id]); const ready = weaponIds.some(id => (weaponTimers[id] || 0) <= 0); cooldownValue.textContent = ready ? 'READY' : `${Math.min(...weaponIds.map(id => weaponTimers[id])).toFixed(1)}s`;
+  const weaponIds = equipped.filter(id => weapons[id]); const ready = !weaponIds.length || weaponIds.some(id => (weaponTimers[id] || 0) <= 0); cooldownValue.textContent = !weaponIds.length ? 'UNARMED' : ready ? 'READY' : `${Math.min(...weaponIds.map(id => weaponTimers[id])).toFixed(1)}s`;
 }
 function spawnEnemy() {
   const side = Math.floor(Math.random() * 4); const w = frame.clientWidth; const h = frame.clientHeight;
@@ -103,7 +105,7 @@ function spawnEnemy() {
   const roll = Math.random(); const type = wave >= 5 && roll < .08 ? 'regent' : roll < .16 ? 'brute' : roll < .3 ? 'charger' : roll < .44 ? 'splitter' : roll < .58 ? 'leech' : roll < .72 ? 'oracle' : 'wisp'; const base = enemyTypes[type];
   enemies.push({ x, y, type, r: base.r, hp: base.hp + wave * 14, maxHp: base.hp + wave * 14, speed: base.speed + wave * 4, damage: base.damage, essence: base.essence, shotTimer: 1.5 });
 }
-function spawnNode() { const weaponIds = Object.keys(weapons).filter(id => !equipped.includes(id)); const upgradeIds = Object.keys(nodeUpgrades).filter(id => !equipped.includes(id)); const duplicateIds = equipped.filter(id => weapons[id]); const ids = Math.random() < .35 ? duplicateIds : [...weaponIds, ...upgradeIds]; if (!ids.length) return; const type = ids[Math.floor(Math.random() * ids.length)]; nodes.push({ x: 70 + Math.random() * (frame.clientWidth - 140), y: 70 + Math.random() * (frame.clientHeight - 140), r: 17, type, life: 25 }); }
+function spawnNode() { const weaponIds = Object.keys(weapons).filter(id => !equipped.includes(id) && (!weaponFamily || weapons[id].family === weaponFamily)); const upgradeIds = Object.keys(nodeUpgrades).filter(id => !equipped.includes(id) && (!weaponFamily || nodeUpgrades[id].family === weaponFamily)); const duplicateIds = equipped.filter(id => weapons[id]); const ids = !weaponFamily ? weaponIds : Math.random() < .35 ? duplicateIds : [...weaponIds, ...upgradeIds]; if (!ids.length) return; const type = ids[Math.floor(Math.random() * ids.length)]; nodes.push({ x: 70 + Math.random() * (frame.clientWidth - 140), y: 70 + Math.random() * (frame.clientHeight - 140), r: 17, type, life: 25 }); }
 function addParticles(x, y, color, amount = 5) { for (let i = 0; i < amount; i++) particles.push({ x, y, vx: (Math.random() - .5) * 150, vy: (Math.random() - .5) * 150, life: .45, color }); }
 function weaponPower(id) {
   let multiplier = 1;
@@ -124,10 +126,10 @@ function fireWeapon(id, target) {
 }
 function autoCast(dt) { const target = nearestEnemy(); if (!target) return; equipped.filter(id => weapons[id]).forEach(id => { weaponTimers[id] = Math.max(0, (weaponTimers[id] || 0) - dt); if (weaponTimers[id] === 0 && (id !== 'blade' || distance(target, player) <= 110)) fireWeapon(id, target); }); }
 function damagePlayer(amount) { if (invulnerable > 0) return; invulnerable = wardDuration; player.hp -= amount; addParticles(player.x, player.y, '#ed725c', 10); if (player.hp <= 0) { running = false; deathOverlay.classList.remove('hidden'); document.querySelector('#deathCopy').textContent = `The vessel reached rank ${String(level).padStart(2, '0')} with ${essence} essence.`; } }
-function collectNode(node) { const isWeapon = Boolean(weapons[node.type]); if (isWeapon) { weaponRanks[node.type] = (weaponRanks[node.type] || 0) + 1; if (!equipped.includes(node.type)) equipped.push(node.type); } else equipped.push(node.type); nodes = nodes.filter(item => item !== node); const item = weapons[node.type] || nodeUpgrades[node.type]; if (nodeUpgrades[node.type]) applyUpgrade(node.type); statusValue.textContent = `${item.name} ${isWeapon && weaponRanks[node.type] > 1 ? `RANK ${weaponRanks[node.type]}` : 'CLAIMED'} / BUILD EVOLVED`; addParticles(node.x, node.y, item.color, 15); updateHud(); }
+function collectNode(node) { const isWeapon = Boolean(weapons[node.type]); if (isWeapon) { if (!weaponFamily) weaponFamily = weapons[node.type].family; weaponRanks[node.type] = (weaponRanks[node.type] || 0) + 1; if (!equipped.includes(node.type)) equipped.push(node.type); } else equipped.push(node.type); nodes = nodes.filter(item => item !== node); const item = weapons[node.type] || nodeUpgrades[node.type]; if (nodeUpgrades[node.type]) applyUpgrade(node.type); statusValue.textContent = `${item.name} ${isWeapon && weaponRanks[node.type] > 1 ? `RANK ${weaponRanks[node.type]}` : 'CLAIMED'} / ${weaponFamily ? weaponFamily.toUpperCase() : 'BUILD'} PATH`; addParticles(node.x, node.y, item.color, 15); updateHud(); }
 function applyUpgrade(id) { if (id === 'damage') damageMultiplier *= 1.25; if (id === 'haste') cooldownMultiplier *= .82; if (id === 'vitality') { player.maxHp += 35; player.hp = player.maxHp; } if (id === 'magnet') pickupRange += 20; if (id === 'mastery') masteryMultiplier *= 1.18; if (id === 'critical') criticalChance += .15; if (id === 'regeneration') regeneration += 2; if (id === 'ward') wardDuration += .35; }
 function offerUpgrade() {
-  running = false; level++; const weaponChoices = Object.keys(weapons).filter(id => !equipped.includes(id)).sort(() => Math.random() - .5).slice(0, 2); const upgradeChoice = Object.keys(upgradeTypes)[Math.floor(Math.random() * Object.keys(upgradeTypes).length)];
+  running = false; level++; const weaponChoices = Object.keys(weapons).filter(id => !equipped.includes(id) && weapons[id].family === weaponFamily).sort(() => Math.random() - .5).slice(0, 2); const compatibleUpgrades = Object.keys(upgradeTypes).filter(id => upgradeTypes[id].family === weaponFamily); const upgradeChoice = compatibleUpgrades[Math.floor(Math.random() * compatibleUpgrades.length)];
   const options = [...weaponChoices.map(id => ({ id, weapon: true })), { id: upgradeChoice, weapon: false }];
   choices.innerHTML = options.map(option => { const item = option.weapon ? weapons[option.id] : upgradeTypes[option.id]; return `<button class="upgrade-card" data-id="${option.id}" data-weapon="${option.weapon}" style="border-color:${item.color}"><b>${option.weapon ? item.name + ' NODE' : 'ASCENSION UPGRADE'}</b><strong>${option.weapon ? item.name : item.name}</strong><span>${item.text}. Choose carefully; your build will auto-cast every equipped weapon.</span></button>`; }).join('');
   choices.querySelectorAll('button').forEach(button => button.addEventListener('click', () => { if (button.dataset.weapon === 'true') equipped.push(button.dataset.id); else applyUpgrade(button.dataset.id); levelOverlay.classList.add('hidden'); running = true; statusValue.textContent = 'ASCENSION CONTINUES / BUILD EVOLVED'; updateHud(); })); levelOverlay.classList.remove('hidden');
@@ -177,7 +179,7 @@ function draw() {
   ctx.strokeStyle = '#ffffff0b';
   for (let x = 0; x < w; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
   for (let y = 0; y < h; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
-  nodes.forEach(node => { const item = weapons[node.type] || nodeUpgrades[node.type]; const pulse = 34 + Math.sin(Date.now() / 160) * 6; ctx.beginPath(); ctx.ellipse(node.x, node.y + 20, 27, 9, 0, 0, Math.PI * 2); ctx.fillStyle = '#0008'; ctx.fill(); ctx.beginPath(); ctx.arc(node.x, node.y, pulse, 0, Math.PI * 2); ctx.fillStyle = `${item.color}20`; ctx.fill(); ctx.beginPath(); ctx.moveTo(node.x, node.y - 23); ctx.lineTo(node.x + 22, node.y); ctx.lineTo(node.x, node.y + 23); ctx.lineTo(node.x - 22, node.y); ctx.closePath(); const relic = ctx.createLinearGradient(node.x - 18, node.y - 18, node.x + 18, node.y + 18); relic.addColorStop(0, '#ffffff55'); relic.addColorStop(.25, item.color); relic.addColorStop(1, '#101f25'); ctx.fillStyle = relic; ctx.fill(); ctx.strokeStyle = item.color; ctx.lineWidth = 3; ctx.stroke(); ctx.beginPath(); ctx.arc(node.x, node.y, 8, 0, Math.PI * 2); ctx.fillStyle = item.color; ctx.fill(); ctx.fillStyle = '#edf2e9'; ctx.font = 'bold 11px "DM Mono"'; ctx.textAlign = 'center'; ctx.fillText(item.name[0], node.x, node.y + 4); });
+  nodes.forEach(node => { const item = weapons[node.type] || nodeUpgrades[node.type]; const pulse = 34 + Math.sin(Date.now() / 160) * 6; ctx.beginPath(); ctx.ellipse(node.x, node.y + 20, 27, 9, 0, 0, Math.PI * 2); ctx.fillStyle = '#0008'; ctx.fill(); ctx.beginPath(); ctx.arc(node.x, node.y, pulse, 0, Math.PI * 2); ctx.fillStyle = `${item.color}20`; ctx.fill(); ctx.beginPath(); ctx.moveTo(node.x, node.y - 23); ctx.lineTo(node.x + 22, node.y); ctx.lineTo(node.x, node.y + 23); ctx.lineTo(node.x - 22, node.y); ctx.closePath(); const relic = ctx.createLinearGradient(node.x - 18, node.y - 18, node.x + 18, node.y + 18); relic.addColorStop(0, '#ffffff55'); relic.addColorStop(.25, item.color); relic.addColorStop(1, '#101f25'); ctx.fillStyle = relic; ctx.fill(); ctx.strokeStyle = item.color; ctx.lineWidth = 3; ctx.stroke(); ctx.beginPath(); ctx.arc(node.x, node.y, 8, 0, Math.PI * 2); ctx.fillStyle = item.color; ctx.fill(); ctx.fillStyle = '#edf2e9'; ctx.font = 'bold 10px "DM Mono"'; ctx.textAlign = 'center'; ctx.fillText(item.name[0], node.x, node.y + 4); ctx.font = '500 10px "DM Mono"'; ctx.fillText(item.name, node.x, node.y + 39); ctx.fillStyle = item.family === 'melee' ? '#ed725c' : '#edc968'; ctx.font = '500 8px "DM Mono"'; ctx.fillText(item.family ? item.family.toUpperCase() : 'NODE', node.x, node.y + 51); });
   projectiles.forEach(projectile => { ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.r, 0, Math.PI * 2); ctx.fillStyle = `${projectile.color}cc`; ctx.fill(); }); enemyProjectiles.forEach(projectile => { ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.r + 5, 0, Math.PI * 2); ctx.fillStyle = '#9fd6ff33'; ctx.fill(); ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.r, 0, Math.PI * 2); ctx.fillStyle = projectile.color; ctx.fill(); });
   enemies.forEach(enemy => { const type = enemyTypes[enemy.type]; ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y + enemy.r + 7, enemy.r * 1.15, enemy.r * .35, 0, 0, Math.PI * 2); ctx.fillStyle = '#0009'; ctx.fill(); drawMonster(enemy, type); ctx.fillStyle = '#ed725c'; ctx.fillRect(enemy.x - enemy.r, enemy.y - enemy.r - 9, enemy.r * 2 * Math.max(0, enemy.hp / enemy.maxHp), 4); });
   particles.forEach(particle => { ctx.globalAlpha = Math.max(0, particle.life * 2); ctx.beginPath(); ctx.arc(particle.x, particle.y, 3, 0, Math.PI * 2); ctx.fillStyle = particle.color; ctx.fill(); ctx.globalAlpha = 1; });

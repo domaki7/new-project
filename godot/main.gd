@@ -57,6 +57,8 @@ var meta_damage := 0
 var meta_health := 0
 var meta_range := 0
 var meta_file := "user://crown_meta.cfg"
+var ascension_options: Array[String] = []
+var ascension_positions := [Vector2(390, 385), Vector2(640, 385), Vector2(890, 385)]
 
 func _ready() -> void:
     load_meta()
@@ -84,10 +86,22 @@ func save_meta() -> void:
     config.set_value("meta", "range", meta_range)
     config.save(meta_file)
 
+func load_path_nodes() -> void:
+    var config := ConfigFile.new()
+    if config.load(meta_file) == OK:
+        for node in config.get_value("paths", weapon_family, []): unlocked_nodes[node] = true
+
+func save_path_nodes() -> void:
+    if weapon_family.is_empty(): return
+    var config := ConfigFile.new()
+    config.load(meta_file)
+    config.set_value("paths", weapon_family, unlocked_nodes.keys())
+    config.save(meta_file)
+
 func start_game() -> void:
     mode = "play"
     level = 1; essence = 0; wave = 1; equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
-    weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0
+    weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
     pickups.append({"position": player.position + Vector2(-100, 0), "name": "STAR BOLT", "family": "RANGED", "life": 40.0})
@@ -145,10 +159,14 @@ func collect_pickups() -> void:
         if player.position.distance_to(pickup.position) < 40.0 + meta_range * 12.0:
             var id: String = pickup.name
             if WEAPONS.has(id):
-                if weapon_family.is_empty(): weapon_family = WEAPONS[id].family
+                if weapon_family.is_empty():
+                    weapon_family = WEAPONS[id].family
+                    load_path_nodes()
+                unlocked_nodes[id] = true
+                save_path_nodes()
                 weapon_ranks[id] = int(weapon_ranks.get(id, 0)) + 1
                 if not equipped.has(id) and equipped.size() < MAX_WEAPONS: equipped.append(id); weapon_cooldowns[id] = 0.0
-            elif UPGRADES.has(id): unlocked_nodes[id] = true; apply_upgrade(id)
+            elif UPGRADES.has(id): unlocked_nodes[id] = true; save_path_nodes(); apply_upgrade(id)
             status = "%s CLAIMED / %s PATH" % [id, weapon_family]
             pickups.erase(pickup)
     pickups = pickups.filter(func(item: Dictionary) -> bool: return item.life > 0.0)
@@ -221,6 +239,34 @@ func update_enemies(delta: float) -> void:
         if enemy.position.distance_to(player.position) < enemy.radius + 17.0: damage_player(enemy.damage * delta)
         if enemy.health <= 0.0: essence += enemy.essence; enemies.erase(enemy)
 
+        if essence >= 240 and mode == "play": open_ascension()
+
+func open_ascension() -> void:
+    mode = "ascension"
+    ascension_options.clear()
+    var candidates: Array[String] = []
+    for id in WEAPONS:
+        if WEAPONS[id].family == weapon_family and not unlocked_nodes.has(id): candidates.append(id)
+    for id in UPGRADES:
+        if UPGRADES[id].family == weapon_family and not unlocked_nodes.has(id): candidates.append(id)
+    candidates.shuffle()
+    for id in candidates:
+        if ascension_options.size() >= 3: break
+        ascension_options.append(id)
+    status = "ASCENSION WEB - CHOOSE A CONNECTED NODE"
+
+func choose_ascension(index: int) -> void:
+    if index < 0 or index >= ascension_options.size(): return
+    var id: String = ascension_options[index]
+    unlocked_nodes[id] = true
+    save_path_nodes()
+    if WEAPONS.has(id) and not equipped.has(id) and equipped.size() < MAX_WEAPONS:
+        equipped.append(id); weapon_cooldowns[id] = 0.0
+    elif UPGRADES.has(id): apply_upgrade(id)
+    level += 1
+    mode = "play"
+    status = "%s UNLOCKED - PATH EXPANDED" % id
+
 func damage_player(amount: float) -> void:
     if invulnerable > 0.0: return
     invulnerable = 0.7; player.health -= amount
@@ -232,6 +278,21 @@ func die() -> void:
 func _input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and event.keycode == KEY_R: start_game()
     if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "start": start_game()
+    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "ascension":
+        for index in ascension_positions.size():
+            if Rect2(ascension_positions[index] - Vector2(100, 44), Vector2(200, 88)).has_point(event.position): choose_ascension(index)
+    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "death":
+        if Rect2(Vector2(410, 430), Vector2(190, 70)).has_point(event.position): buy_meta("damage", 30)
+        elif Rect2(Vector2(625, 430), Vector2(190, 70)).has_point(event.position): buy_meta("health", 35)
+        elif Rect2(Vector2(840, 430), Vector2(190, 70)).has_point(event.position): buy_meta("range", 25)
+
+func buy_meta(kind: String, cost: int) -> void:
+    if crown_coins < cost: return
+    crown_coins -= cost
+    if kind == "damage": meta_damage += 1
+    elif kind == "health": meta_health += 1
+    elif kind == "range": meta_range += 1
+    save_meta()
 
 func _draw() -> void:
     draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color("101a2c"))
@@ -253,4 +314,5 @@ func _draw() -> void:
         var crown := PackedVector2Array([player.position + Vector2(-12, -21), player.position + Vector2(0, -45), player.position + Vector2(12, -21), player.position + Vector2(0, -30)]); draw_colored_polygon(crown, Color("edc968")); draw_line(player.position + Vector2(19, 5), player.position + Vector2(43, 28), Color("aebbb2"), 5.0)
         for index in equipped.size(): draw_circle(player.position + Vector2(cos(index * TAU / max(1, equipped.size())), sin(index * TAU / max(1, equipped.size()))) * 42.0, 7.0, WEAPONS[equipped[index]].color)
     if mode == "start": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .78)); draw_string(ThemeDB.fallback_font, Vector2(390, 315), "CROWN OF THE ABSOLUTE", HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(430, 355), "MOVE  /  COLLECT RELICS  /  ASCEND", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("63d1c2")); draw_string(ThemeDB.fallback_font, Vector2(470, 410), "CLICK TO ENTER  ·  R TO RESTART", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("aebbb2"))
-    if mode == "death": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .72)); draw_string(ThemeDB.fallback_font, Vector2(455, 330), "VESSEL LOST", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color("ed725c")); draw_string(ThemeDB.fallback_font, Vector2(445, 370), "%d CROWN COINS  ·  PRESS R" % crown_coins, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("edc968"))
+    if mode == "ascension": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(410, 155), "CONNECTED ASCENSION WEB", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(470, 190), "%s PATH  ·  CHOOSE ONE CONNECTED NODE" % weapon_family, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("63d1c2")); for index in ascension_positions.size(): var position: Vector2 = ascension_positions[index]; if index < ascension_options.size(): draw_line(Vector2(640, 245), position, Color(0.38, 0.5, 0.55, .7), 2.0); var id: String = ascension_options[index]; var data: Dictionary = WEAPONS[id] if WEAPONS.has(id) else UPGRADES[id]; draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), Color("182d46")); draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), data.color, false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, -8), id, HORIZONTAL_ALIGNMENT_LEFT, 164, 13, data.color); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 16), data.get("text", "weapon node"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2"))
+    if mode == "death": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(455, 220), "VESSEL LOST", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color("ed725c")); draw_string(ThemeDB.fallback_font, Vector2(455, 260), "%d CROWN COINS  ·  PRESS R TO RETURN" % crown_coins, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("edc968")); var shop_names := ["CROWN EDGE · 30", "THRONE OF IRON · 35", "SOVEREIGN GRASP · 25"]; for index in 3: var position := Vector2(505 + index * 215, 465); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("182d46")); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("edc968"), false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 5), shop_names[index], HORIZONTAL_ALIGNMENT_LEFT, 164, 11, Color("f2f0d0"))

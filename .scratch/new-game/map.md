@@ -30,6 +30,7 @@
 - Expand the build layer with eight weapons and permanent ascension upgrades for damage, haste, vitality, and pickup range.
 - Add Arsenal Mastery so ascension can deepen the current loadout instead of only adding weapons.
 - Add specialist upgrades for critical hits, regeneration, damage immunity, and pickup range.
+- Spawn passive upgrade runes alongside weapon nodes as collectible powerups.
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

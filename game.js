@@ -34,6 +34,13 @@ const upgradeTypes = {
   regeneration: { name: 'BLOOD OF STARS', color: '#ff9b52', text: 'regenerate 2 vitality each second' },
   ward: { name: 'CROWNWARD', color: '#9fd6ff', text: 'extend damage invulnerability' }
 };
+const nodeUpgrades = {
+  critical: { name: 'EXECUTIONER RUNE', color: '#f2f0d0', text: '15% chance to deal double damage' },
+  regeneration: { name: 'BLOOD RUNE', color: '#ff9b52', text: 'regenerate 2 vitality each second' },
+  ward: { name: 'WARD RUNE', color: '#9fd6ff', text: 'extend damage invulnerability' },
+  magnet: { name: 'GRAVITY RUNE', color: '#63d1c2', text: 'collect nodes from farther away' },
+  vitality: { name: 'IRON RUNE', color: '#b9c8c2', text: '+35 maximum vitality' }
+};
 const enemyTypes = {
   wisp: { color: '#63d1c2', r: 12, hp: 30, speed: 54, damage: 7, essence: 10 },
   brute: { color: '#ed725c', r: 24, hp: 135, speed: 25, damage: 14, essence: 28 },
@@ -83,8 +90,8 @@ function reset() {
 }
 function updateHud() {
   levelValue.textContent = String(level).padStart(2, '0'); essenceValue.textContent = String(essence).padStart(3, '0'); waveValue.textContent = `0${wave} / 05`; healthBar.style.width = `${Math.max(0, player.hp / player.maxHp * 100)}%`;
-  nodePills.innerHTML = equipped.map(id => `<span class="node-pill" style="border-color:${weapons[id].color};color:${weapons[id].color}">${weapons[id].name}</span>`).join('');
-  const ready = equipped.some(id => (weaponTimers[id] || 0) <= 0); cooldownValue.textContent = ready ? 'READY' : `${Math.min(...equipped.map(id => weaponTimers[id])).toFixed(1)}s`;
+  nodePills.innerHTML = equipped.map(id => { const item = weapons[id] || nodeUpgrades[id]; return `<span class="node-pill" style="border-color:${item.color};color:${item.color}">${item.name}</span>`; }).join('');
+  const weaponIds = equipped.filter(id => weapons[id]); const ready = weaponIds.some(id => (weaponTimers[id] || 0) <= 0); cooldownValue.textContent = ready ? 'READY' : `${Math.min(...weaponIds.map(id => weaponTimers[id])).toFixed(1)}s`;
 }
 function spawnEnemy() {
   const side = Math.floor(Math.random() * 4); const w = frame.clientWidth; const h = frame.clientHeight;
@@ -92,7 +99,7 @@ function spawnEnemy() {
   const roll = Math.random(); const type = wave >= 5 && roll < .08 ? 'regent' : roll < .16 ? 'brute' : roll < .3 ? 'charger' : roll < .44 ? 'splitter' : roll < .58 ? 'leech' : roll < .72 ? 'oracle' : 'wisp'; const base = enemyTypes[type];
   enemies.push({ x, y, type, r: base.r, hp: base.hp + wave * 14, maxHp: base.hp + wave * 14, speed: base.speed + wave * 4, damage: base.damage, essence: base.essence, shotTimer: 1.5 });
 }
-function spawnNode() { const ids = Object.keys(weapons).filter(id => !equipped.includes(id)); if (!ids.length) return; const type = ids[Math.floor(Math.random() * ids.length)]; nodes.push({ x: 70 + Math.random() * (frame.clientWidth - 140), y: 70 + Math.random() * (frame.clientHeight - 140), r: 17, type, life: 25 }); }
+function spawnNode() { const weaponIds = Object.keys(weapons).filter(id => !equipped.includes(id)); const upgradeIds = Object.keys(nodeUpgrades).filter(id => !equipped.includes(id)); const ids = [...weaponIds, ...upgradeIds]; if (!ids.length) return; const type = ids[Math.floor(Math.random() * ids.length)]; nodes.push({ x: 70 + Math.random() * (frame.clientWidth - 140), y: 70 + Math.random() * (frame.clientHeight - 140), r: 17, type, life: 25 }); }
 function addParticles(x, y, color, amount = 5) { for (let i = 0; i < amount; i++) particles.push({ x, y, vx: (Math.random() - .5) * 150, vy: (Math.random() - .5) * 150, life: .45, color }); }
 function weaponPower(id) {
   let multiplier = 1;
@@ -111,9 +118,9 @@ function fireWeapon(id, target) {
   else if (id === 'storm') enemies.filter(enemy => distance(enemy, target) < 180).slice(0, 4).forEach(enemy => { enemy.hp -= power * 1.1; addParticles(enemy.x, enemy.y, weapon.color, 5); });
   else projectiles.push({ x: player.x, y: player.y, vx: Math.cos(angle) * 560, vy: Math.sin(angle) * 560, r: 7, life: 1.4, damage: id === 'frost' ? power * .9 : power, color: weapon.color, pierce: equipped.includes('blade'), slow: id === 'frost', poison: id === 'venom' });
 }
-function autoCast(dt) { const target = nearestEnemy(); if (!target) return; equipped.forEach(id => { weaponTimers[id] = Math.max(0, (weaponTimers[id] || 0) - dt); if (weaponTimers[id] === 0) fireWeapon(id, target); }); }
+function autoCast(dt) { const target = nearestEnemy(); if (!target) return; equipped.filter(id => weapons[id]).forEach(id => { weaponTimers[id] = Math.max(0, (weaponTimers[id] || 0) - dt); if (weaponTimers[id] === 0) fireWeapon(id, target); }); }
 function damagePlayer(amount) { if (invulnerable > 0) return; invulnerable = wardDuration; player.hp -= amount; addParticles(player.x, player.y, '#ed725c', 10); if (player.hp <= 0) { running = false; deathOverlay.classList.remove('hidden'); document.querySelector('#deathCopy').textContent = `The vessel reached rank ${String(level).padStart(2, '0')} with ${essence} essence.`; } }
-function collectNode(node) { equipped.push(node.type); nodes = nodes.filter(item => item !== node); statusValue.textContent = `${weapons[node.type].name} NODE CLAIMED / AUTO-CAST ARMED`; addParticles(node.x, node.y, weapons[node.type].color, 15); updateHud(); }
+function collectNode(node) { equipped.push(node.type); nodes = nodes.filter(item => item !== node); const item = weapons[node.type] || nodeUpgrades[node.type]; if (nodeUpgrades[node.type]) applyUpgrade(node.type); statusValue.textContent = `${item.name} CLAIMED / BUILD EVOLVED`; addParticles(node.x, node.y, item.color, 15); updateHud(); }
 function applyUpgrade(id) { if (id === 'damage') damageMultiplier *= 1.25; if (id === 'haste') cooldownMultiplier *= .82; if (id === 'vitality') { player.maxHp += 35; player.hp = player.maxHp; } if (id === 'magnet') pickupRange += 20; if (id === 'mastery') masteryMultiplier *= 1.18; if (id === 'critical') criticalChance += .15; if (id === 'regeneration') regeneration += 2; if (id === 'ward') wardDuration += .35; }
 function offerUpgrade() {
   running = false; level++; const weaponChoices = Object.keys(weapons).filter(id => !equipped.includes(id)).sort(() => Math.random() - .5).slice(0, 2); const upgradeChoice = Object.keys(upgradeTypes)[Math.floor(Math.random() * Object.keys(upgradeTypes).length)];
@@ -133,7 +140,7 @@ function update(dt) {
 function drawEquippedWeapons() {
   if (!player || !equipped.length) return;
   ctx.save(); ctx.translate(player.x, player.y);
-  equipped.forEach((id, index) => {
+  equipped.filter(id => weapons[id]).forEach((id, index) => {
     const weapon = weapons[id]; const angle = (index / equipped.length) * Math.PI * 2 - Math.PI / 2; const radius = 39 + Math.min(index, 3) * 5;
     const x = Math.cos(angle) * radius; const y = Math.sin(angle) * radius;
     ctx.save(); ctx.translate(x, y); ctx.rotate(angle + Math.PI / 2); ctx.strokeStyle = weapon.color; ctx.fillStyle = `${weapon.color}cc`; ctx.lineWidth = 3;
@@ -165,7 +172,7 @@ function draw() {
   ctx.strokeStyle = '#ffffff0b';
   for (let x = 0; x < w; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
   for (let y = 0; y < h; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
-  nodes.forEach(node => { const weapon = weapons[node.type]; const pulse = 34 + Math.sin(Date.now() / 160) * 6; ctx.beginPath(); ctx.ellipse(node.x, node.y + 20, 27, 9, 0, 0, Math.PI * 2); ctx.fillStyle = '#0008'; ctx.fill(); ctx.beginPath(); ctx.arc(node.x, node.y, pulse, 0, Math.PI * 2); ctx.fillStyle = `${weapon.color}20`; ctx.fill(); ctx.beginPath(); ctx.moveTo(node.x, node.y - 23); ctx.lineTo(node.x + 22, node.y); ctx.lineTo(node.x, node.y + 23); ctx.lineTo(node.x - 22, node.y); ctx.closePath(); const relic = ctx.createLinearGradient(node.x - 18, node.y - 18, node.x + 18, node.y + 18); relic.addColorStop(0, '#ffffff55'); relic.addColorStop(.25, weapon.color); relic.addColorStop(1, '#101f25'); ctx.fillStyle = relic; ctx.fill(); ctx.strokeStyle = weapon.color; ctx.lineWidth = 3; ctx.stroke(); ctx.beginPath(); ctx.arc(node.x, node.y, 8, 0, Math.PI * 2); ctx.fillStyle = weapon.color; ctx.fill(); ctx.fillStyle = '#edf2e9'; ctx.font = 'bold 11px "DM Mono"'; ctx.textAlign = 'center'; ctx.fillText(weapon.name[0], node.x, node.y + 4); });
+  nodes.forEach(node => { const item = weapons[node.type] || nodeUpgrades[node.type]; const pulse = 34 + Math.sin(Date.now() / 160) * 6; ctx.beginPath(); ctx.ellipse(node.x, node.y + 20, 27, 9, 0, 0, Math.PI * 2); ctx.fillStyle = '#0008'; ctx.fill(); ctx.beginPath(); ctx.arc(node.x, node.y, pulse, 0, Math.PI * 2); ctx.fillStyle = `${item.color}20`; ctx.fill(); ctx.beginPath(); ctx.moveTo(node.x, node.y - 23); ctx.lineTo(node.x + 22, node.y); ctx.lineTo(node.x, node.y + 23); ctx.lineTo(node.x - 22, node.y); ctx.closePath(); const relic = ctx.createLinearGradient(node.x - 18, node.y - 18, node.x + 18, node.y + 18); relic.addColorStop(0, '#ffffff55'); relic.addColorStop(.25, item.color); relic.addColorStop(1, '#101f25'); ctx.fillStyle = relic; ctx.fill(); ctx.strokeStyle = item.color; ctx.lineWidth = 3; ctx.stroke(); ctx.beginPath(); ctx.arc(node.x, node.y, 8, 0, Math.PI * 2); ctx.fillStyle = item.color; ctx.fill(); ctx.fillStyle = '#edf2e9'; ctx.font = 'bold 11px "DM Mono"'; ctx.textAlign = 'center'; ctx.fillText(item.name[0], node.x, node.y + 4); });
   projectiles.forEach(projectile => { ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.r, 0, Math.PI * 2); ctx.fillStyle = `${projectile.color}cc`; ctx.fill(); }); enemyProjectiles.forEach(projectile => { ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.r + 5, 0, Math.PI * 2); ctx.fillStyle = '#9fd6ff33'; ctx.fill(); ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.r, 0, Math.PI * 2); ctx.fillStyle = projectile.color; ctx.fill(); });
   enemies.forEach(enemy => { const type = enemyTypes[enemy.type]; ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y + enemy.r + 7, enemy.r * 1.15, enemy.r * .35, 0, 0, Math.PI * 2); ctx.fillStyle = '#0009'; ctx.fill(); drawMonster(enemy, type); ctx.fillStyle = '#ed725c'; ctx.fillRect(enemy.x - enemy.r, enemy.y - enemy.r - 9, enemy.r * 2 * Math.max(0, enemy.hp / enemy.maxHp), 4); });
   particles.forEach(particle => { ctx.globalAlpha = Math.max(0, particle.life * 2); ctx.beginPath(); ctx.arc(particle.x, particle.y, 3, 0, Math.PI * 2); ctx.fillStyle = particle.color; ctx.fill(); ctx.globalAlpha = 1; });

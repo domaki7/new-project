@@ -32,6 +32,7 @@
 - Add specialist upgrades for critical hits, regeneration, damage immunity, and pickup range.
 - Spawn passive upgrade runes alongside weapon nodes as collectible powerups.
 - Slow ascension choices to 240 essence initially, then add 190 essence per level.
+- Allow duplicate weapon nodes to evolve individual weapon ranks and auto-cast damage.
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

@@ -101,9 +101,10 @@ function reset() {
 }
 function updateHud() {
   levelValue.textContent = String(level).padStart(2, '0'); essenceValue.textContent = String(essence).padStart(3, '0'); waveValue.textContent = `0${wave} / 05`; healthBar.style.width = `${Math.max(0, player.hp / player.maxHp * 100)}%`;
+  const weaponIds = equipped.filter(id => weapons[id]);
   nodePills.innerHTML = equipped.length ? equipped.map(id => { const item = weapons[id] || nodeUpgrades[id]; const rank = weapons[id] ? ` · RANK ${weaponRanks[id] || 1}` : ''; return `<span class="node-pill" style="border-color:${item.color};color:${item.color}">${item.name}${rank}</span>`; }).join('') : '<span class="empty-pill">NONE</span>';
-  pathBadge.textContent = weaponFamily ? `${weaponFamily.toUpperCase()} PATH` : 'UNARMED';
-  const weaponIds = equipped.filter(id => weapons[id]); const ready = !weaponIds.length || weaponIds.some(id => (weaponTimers[id] || 0) <= 0); cooldownValue.textContent = !weaponIds.length ? 'UNARMED' : ready ? 'READY' : `${Math.min(...weaponIds.map(id => weaponTimers[id])).toFixed(1)}s`;
+  pathBadge.textContent = weaponFamily ? `${weaponFamily.toUpperCase()} PATH · ${weaponIds.length}/${maxWeapons}` : 'UNARMED · 0/5';
+  const ready = !weaponIds.length || weaponIds.some(id => (weaponTimers[id] || 0) <= 0); cooldownValue.textContent = !weaponIds.length ? 'UNARMED' : ready ? 'READY' : `${Math.min(...weaponIds.map(id => weaponTimers[id])).toFixed(1)}s`;
 }
 function spawnEnemy() {
   const side = Math.floor(Math.random() * 4); const w = frame.clientWidth; const h = frame.clientHeight;
@@ -152,8 +153,9 @@ function update(dt) {
 function drawEquippedWeapons() {
   if (!player || !equipped.length) return;
   ctx.save(); ctx.translate(player.x, player.y);
-  equipped.filter(id => weapons[id]).forEach((id, index) => {
-    const weapon = weapons[id]; const orbitAngle = (index / equipped.length) * Math.PI * 2 - Math.PI / 2; const angle = id === 'blade' && meleeFlash > 0 ? meleeAngle - 1.05 + (1 - meleeFlash / .2) * 2.1 : orbitAngle; const radius = id === 'blade' && meleeFlash > 0 ? 18 : 39 + Math.min(index, 3) * 5;
+  const equippedWeapons = equipped.filter(id => weapons[id]);
+  equippedWeapons.forEach((id, index) => {
+    const weapon = weapons[id]; const orbitAngle = (index / equippedWeapons.length) * Math.PI * 2 - Math.PI / 2; const angle = id === 'blade' && meleeFlash > 0 ? meleeAngle - 1.05 + (1 - meleeFlash / .2) * 2.1 : orbitAngle; const radius = id === 'blade' && meleeFlash > 0 ? 18 : 39 + Math.min(index, 3) * 5;
     const x = Math.cos(angle) * radius; const y = Math.sin(angle) * radius;
     ctx.save(); ctx.translate(x, y); ctx.rotate(angle + Math.PI / 2); ctx.strokeStyle = weapon.color; ctx.fillStyle = `${weapon.color}cc`; ctx.lineWidth = 3;
     if (id === 'blade') { ctx.beginPath(); ctx.moveTo(-6, 10); ctx.lineTo(0, -52); ctx.lineTo(6, 10); ctx.closePath(); ctx.fillStyle = '#dbe6df'; ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-13, 9); ctx.lineTo(13, 9); ctx.strokeStyle = '#edc968'; ctx.lineWidth = 5; ctx.stroke(); ctx.beginPath(); ctx.moveTo(-4, 10); ctx.lineTo(4, 10); ctx.strokeStyle = '#7d9693'; ctx.lineWidth = 4; ctx.stroke(); if (meleeFlash > 0) { ctx.beginPath(); ctx.arc(0, 0, 58, -1.05, 1.05); ctx.strokeStyle = '#fff1b0'; ctx.lineWidth = 3; ctx.globalAlpha = meleeFlash / .2; ctx.stroke(); } }

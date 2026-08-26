@@ -12,6 +12,10 @@ const statusValue = document.querySelector('#statusValue');
 const healthBar = document.querySelector('#healthBar');
 const nodePills = document.querySelector('#nodePills');
 const cooldownValue = document.querySelector('#cooldownValue');
+const pathBadge = document.createElement('strong');
+pathBadge.textContent = 'UNARMED';
+pathBadge.style.cssText = 'display:inline-block;margin-left:18px;color:#63d1c2;font:500 12px "DM Mono",monospace;letter-spacing:.08em';
+document.querySelector('.hud-stats').append(pathBadge);
 const keys = new Set();
 const mouse = { x: 0, y: 0 };
 const weapons = {
@@ -96,7 +100,8 @@ function reset() {
 }
 function updateHud() {
   levelValue.textContent = String(level).padStart(2, '0'); essenceValue.textContent = String(essence).padStart(3, '0'); waveValue.textContent = `0${wave} / 05`; healthBar.style.width = `${Math.max(0, player.hp / player.maxHp * 100)}%`;
-  nodePills.innerHTML = equipped.map(id => { const item = weapons[id] || nodeUpgrades[id]; const rank = weapons[id] ? ` · RANK ${weaponRanks[id] || 1}` : ''; return `<span class="node-pill" style="border-color:${item.color};color:${item.color}">${item.name}${rank}</span>`; }).join('');
+  nodePills.innerHTML = equipped.length ? equipped.map(id => { const item = weapons[id] || nodeUpgrades[id]; const rank = weapons[id] ? ` · RANK ${weaponRanks[id] || 1}` : ''; return `<span class="node-pill" style="border-color:${item.color};color:${item.color}">${item.name}${rank}</span>`; }).join('') : '<span class="empty-pill">NONE</span>';
+  pathBadge.textContent = weaponFamily ? `${weaponFamily.toUpperCase()} PATH` : 'UNARMED';
   const weaponIds = equipped.filter(id => weapons[id]); const ready = !weaponIds.length || weaponIds.some(id => (weaponTimers[id] || 0) <= 0); cooldownValue.textContent = !weaponIds.length ? 'UNARMED' : ready ? 'READY' : `${Math.min(...weaponIds.map(id => weaponTimers[id])).toFixed(1)}s`;
 }
 function spawnEnemy() {

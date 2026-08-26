@@ -70,13 +70,20 @@ function spawnEnemy() {
 }
 function spawnNode() { const ids = Object.keys(weapons).filter(id => !equipped.includes(id)); if (!ids.length) return; const type = ids[Math.floor(Math.random() * ids.length)]; nodes.push({ x: 70 + Math.random() * (frame.clientWidth - 140), y: 70 + Math.random() * (frame.clientHeight - 140), r: 17, type, life: 25 }); }
 function addParticles(x, y, color, amount = 5) { for (let i = 0; i < amount; i++) particles.push({ x, y, vx: (Math.random() - .5) * 150, vy: (Math.random() - .5) * 150, life: .45, color }); }
+function weaponPower(id) {
+  let multiplier = 1;
+  if (id === 'bolt' && equipped.includes('blade')) multiplier += .35;
+  if (id === 'nova' && equipped.includes('chain')) multiplier += .3;
+  if (id === 'meteor' && equipped.includes('crown')) multiplier += .4;
+  return player.damage * multiplier;
+}
 function fireWeapon(id, target) {
   const weapon = weapons[id]; weaponTimers[id] = weapon.cooldown; const angle = Math.atan2(target.y - player.y, target.x - player.x);
-  if (id === 'blade') { enemies.filter(enemy => distance(enemy, player) < 86).forEach(enemy => enemy.hp -= player.damage * 1.4); addParticles(player.x + Math.cos(angle) * 45, player.y + Math.sin(angle) * 45, weapon.color, 12); }
-  else if (id === 'nova') { enemies.filter(enemy => distance(enemy, player) < 150).forEach(enemy => { enemy.hp -= player.damage * 1.25; enemy.x += Math.cos(angle) * 20; enemy.y += Math.sin(angle) * 20; }); addParticles(player.x, player.y, weapon.color, 20); }
-  else if (id === 'chain') { let current = target; for (let i = 0; i < 3 && current; i++) { current.hp -= player.damage * 1.1; addParticles(current.x, current.y, weapon.color, 4); current = enemies.find(enemy => enemy !== current && distance(enemy, current) < 130 && enemy.hp > 0); } }
-  else if (id === 'meteor') projectiles.push({ x: target.x, y: target.y, r: 42, life: .5, damage: player.damage * 2.5, color: weapon.color, impact: true });
-  else projectiles.push({ x: player.x, y: player.y, vx: Math.cos(angle) * 560, vy: Math.sin(angle) * 560, r: 7, life: 1.4, damage: player.damage, color: weapon.color });
+  if (id === 'blade') { enemies.filter(enemy => distance(enemy, player) < 86).forEach(enemy => enemy.hp -= weaponPower(id) * 1.4); addParticles(player.x + Math.cos(angle) * 45, player.y + Math.sin(angle) * 45, weapon.color, 12); }
+  else if (id === 'nova') { enemies.filter(enemy => distance(enemy, player) < 150).forEach(enemy => { enemy.hp -= weaponPower(id) * 1.25; enemy.x += Math.cos(angle) * 20; enemy.y += Math.sin(angle) * 20; }); addParticles(player.x, player.y, weapon.color, 20); }
+  else if (id === 'chain') { let current = target; for (let i = 0; i < 3 && current; i++) { current.hp -= weaponPower(id) * 1.1; addParticles(current.x, current.y, weapon.color, 4); current = enemies.find(enemy => enemy !== current && distance(enemy, current) < 130 && enemy.hp > 0); } }
+  else if (id === 'meteor') projectiles.push({ x: target.x, y: target.y, r: 42, life: .5, damage: weaponPower(id) * 2.5, color: weapon.color, impact: true });
+  else projectiles.push({ x: player.x, y: player.y, vx: Math.cos(angle) * 560, vy: Math.sin(angle) * 560, r: 7, life: 1.4, damage: weaponPower(id), color: weapon.color, pierce: equipped.includes('blade') });
 }
 function autoCast(dt) { const target = nearestEnemy(); if (!target) return; equipped.forEach(id => { weaponTimers[id] = Math.max(0, (weaponTimers[id] || 0) - dt); if (weaponTimers[id] === 0) fireWeapon(id, target); }); }
 function damagePlayer(amount) { if (invulnerable > 0) return; invulnerable = .7; player.hp -= amount; addParticles(player.x, player.y, '#ed725c', 10); if (player.hp <= 0) { running = false; deathOverlay.classList.remove('hidden'); document.querySelector('#deathCopy').textContent = `The vessel reached rank ${String(level).padStart(2, '0')} with ${essence} essence.`; } }
@@ -91,7 +98,7 @@ function update(dt) {
   player.x = Math.max(player.r, Math.min(frame.clientWidth - player.r, player.x + dx / magnitude * player.speed * dt)); player.y = Math.max(player.r, Math.min(frame.clientHeight - player.r, player.y + dy / magnitude * player.speed * dt)); invulnerable = Math.max(0, invulnerable - dt); spawnTimer -= dt;
   if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = Math.max(.3, 1.15 - wave * .1); } if (Math.random() < dt * .16 && nodes.length < 4) spawnNode(); autoCast(dt);
   enemies.forEach(enemy => { const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x); enemy.x += Math.cos(angle) * enemy.speed * dt; enemy.y += Math.sin(angle) * enemy.speed * dt; if (enemy.type === 'leech' && Math.random() < dt * .3) player.hp = Math.max(1, player.hp - .5); if (distance(enemy, player) < enemy.r + player.r) damagePlayer(enemy.damage * dt); if (enemy.type === 'splitter' && Math.random() < dt * .04 && enemies.length < 18) enemies.push({ ...enemy, type: 'wisp', r: 10, hp: 20, maxHp: 20, speed: 62, x: enemy.x + 20, y: enemy.y + 20 }); });
-  projectiles.forEach(projectile => { if (projectile.impact) { projectile.life -= dt; if (projectile.life < .35) enemies.filter(enemy => distance(enemy, projectile) < projectile.r).forEach(enemy => enemy.hp -= projectile.damage * dt * 3); } else { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; enemies.forEach(enemy => { if (distance(enemy, projectile) < enemy.r + projectile.r) { enemy.hp -= projectile.damage; projectile.life = 0; addParticles(enemy.x, enemy.y, projectile.color, 4); } }); } });
+  projectiles.forEach(projectile => { if (projectile.impact) { projectile.life -= dt; if (projectile.life < .35) enemies.filter(enemy => distance(enemy, projectile) < projectile.r).forEach(enemy => enemy.hp -= projectile.damage * dt * 3); } else { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; enemies.forEach(enemy => { if (distance(enemy, projectile) < enemy.r + projectile.r) { enemy.hp -= projectile.damage; if (!projectile.pierce) projectile.life = 0; addParticles(enemy.x, enemy.y, projectile.color, 4); } }); } });
   projectiles = projectiles.filter(projectile => projectile.life > 0); enemies = enemies.filter(enemy => { if (enemy.hp <= 0) { essence += enemy.essence; addParticles(enemy.x, enemy.y, enemyTypes[enemy.type].color, 8); if (essence >= level * 100) offerUpgrade(); return false; } return true; });
   nodes.forEach(node => { node.life -= dt; if (distance(node, player) < node.r + player.r) collectNode(node); }); nodes = nodes.filter(node => node.life > 0); particles.forEach(particle => { particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.life -= dt; }); particles = particles.filter(particle => particle.life > 0); if (enemies.length > 10 + wave * 3) wave = Math.min(5, wave + 1); updateHud();
 }

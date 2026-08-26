@@ -5,4 +5,6 @@ Status: needs-info
 
 What game are we building?
 
-Please define the genre, player fantasy, camera perspective, and one or two games that capture the intended feel. Include what “node-like” means in this context if it refers to a specific game, system, or visual style.
+Reference direction: an original reincarnation fantasy inspired by the feeling of “That Time I Got Reincarnated as a Tyrant God”: begin as an unknown or weak character, collect supernatural node abilities, and grow toward godlike power and authority.
+
+Please confirm the camera perspective and whether the first build should focus on action combat, exploration, kingdom growth, or a combination. The project will use original characters, names, lore, and art.

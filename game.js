@@ -16,12 +16,16 @@ const cooldownValue = document.querySelector('#cooldownValue');
 const crownCoinsValue = document.createElement('strong');
 const deathShop = document.createElement('div');
 const meta = JSON.parse(localStorage.getItem('crown-absolute-meta') || '{"coins":0,"damage":0,"vitality":0,"magnet":0}');
+meta.meleeNodes = meta.meleeNodes || [];
+meta.rangedNodes = meta.rangedNodes || [];
 const metaUpgrades = {
   damage: { name: 'CROWN EDGE', text: '+8% starting weapon power', cost: 30 },
   vitality: { name: 'THRONE OF IRON', text: '+12 starting vitality', cost: 35 },
   magnet: { name: 'SOVEREIGN GRASP', text: '+12 pickup range', cost: 25 }
 };
 function saveMeta() { localStorage.setItem('crown-absolute-meta', JSON.stringify(meta)); }
+function savedPathNodes(family) { return new Set(meta[`${family}Nodes`] || []); }
+function savePathNodes() { if (weaponFamily) { meta[`${weaponFamily}Nodes`] = [...unlockedNodes]; saveMeta(); } }
 function buildDeathShop() {
   crownCoinsValue.textContent = `${meta.coins} COINS`;
   crownCoinsValue.style.cssText = 'display:block;margin-top:18px;color:#edc968;font:500 14px "DM Mono",monospace;letter-spacing:.08em';
@@ -152,7 +156,7 @@ function fireWeapon(id, target) {
 }
 function autoCast(dt) { const target = nearestEnemy(); if (!target) return; equipped.filter(id => weapons[id]).forEach(id => { weaponTimers[id] = Math.max(0, (weaponTimers[id] || 0) - dt); if (weaponTimers[id] === 0 && (id !== 'blade' || distance(target, player) <= 110)) fireWeapon(id, target); }); }
 function damagePlayer(amount) { if (invulnerable > 0) return; invulnerable = wardDuration; player.hp -= amount; addParticles(player.x, player.y, '#ed725c', 10); if (player.hp <= 0) { running = false; meta.coins += Math.max(5, Math.floor(essence / 12) + level * 3); saveMeta(); buildDeathShop(); deathOverlay.classList.remove('hidden'); document.querySelector('#deathCopy').textContent = `The vessel reached rank ${String(level).padStart(2, '0')} with ${essence} essence. Spend your Crown Coins before returning.`; } }
-function collectNode(node) { const isWeapon = Boolean(weapons[node.type]); if (isWeapon) { if (!weaponFamily) weaponFamily = weapons[node.type].family; weaponRanks[node.type] = (weaponRanks[node.type] || 0) + 1; if (!equipped.includes(node.type) && equipped.filter(id => weapons[id]).length < maxWeapons) equipped.push(node.type); } else equipped.push(node.type); nodes = nodes.filter(item => item !== node); const item = weapons[node.type] || nodeUpgrades[node.type]; if (nodeUpgrades[node.type]) applyUpgrade(node.type); statusValue.textContent = `${item.name} ${isWeapon && weaponRanks[node.type] > 1 ? `RANK ${weaponRanks[node.type]}` : 'CLAIMED'} / ${weaponFamily ? weaponFamily.toUpperCase() : 'BUILD'} PATH`; addParticles(node.x, node.y, item.color, 15); updateHud(); }
+function collectNode(node) { const isWeapon = Boolean(weapons[node.type]); if (isWeapon) { if (!weaponFamily) { weaponFamily = weapons[node.type].family; unlockedNodes = savedPathNodes(weaponFamily); } unlockedNodes.add(node.type); weaponRanks[node.type] = (weaponRanks[node.type] || 0) + 1; if (!equipped.includes(node.type) && equipped.filter(id => weapons[id]).length < maxWeapons) equipped.push(node.type); } else { unlockedNodes.add(node.type); equipped.push(node.type); } savePathNodes(); nodes = nodes.filter(item => item !== node); const item = weapons[node.type] || nodeUpgrades[node.type]; if (nodeUpgrades[node.type]) applyUpgrade(node.type); statusValue.textContent = `${item.name} ${isWeapon && weaponRanks[node.type] > 1 ? `RANK ${weaponRanks[node.type]}` : 'CLAIMED'} / ${weaponFamily ? weaponFamily.toUpperCase() : 'BUILD'} PATH`; addParticles(node.x, node.y, item.color, 15); updateHud(); }
 function applyUpgrade(id) { if (id === 'damage') damageMultiplier *= 1.25; if (id === 'haste') cooldownMultiplier *= .82; if (id === 'vitality') { player.maxHp += 35; player.hp = player.maxHp; } if (id === 'magnet') pickupRange += 20; if (id === 'mastery') masteryMultiplier *= 1.18; if (id === 'critical') criticalChance += .15; if (id === 'regeneration') regeneration += 2; if (id === 'ward') wardDuration += .35; }
 function nodeWeb() {
   const root = `core-${weaponFamily}`;
@@ -167,7 +171,7 @@ function nodeWeb() {
 }
 function offerUpgrade() {
   running = false; level++; choices.innerHTML = nodeWeb();
-  choices.querySelectorAll('.web-node.available').forEach(button => button.addEventListener('click', () => { const id = button.dataset.id; if (weapons[id] && !equipped.includes(id) && equipped.filter(item => weapons[item]).length >= maxWeapons) return; unlockedNodes.add(id); if (weapons[id] && !equipped.includes(id)) { equipped.push(id); weaponRanks[id] = 1; } if (!weapons[id]) applyUpgrade(id); levelOverlay.classList.add('hidden'); running = true; statusValue.textContent = `${(weapons[id] || upgradeTypes[id]).name} UNLOCKED / PATH EXPANDED`; updateHud(); })); levelOverlay.classList.remove('hidden');
+  choices.querySelectorAll('.web-node.available').forEach(button => button.addEventListener('click', () => { const id = button.dataset.id; if (weapons[id] && !equipped.includes(id) && equipped.filter(item => weapons[item]).length >= maxWeapons) return; unlockedNodes.add(id); savePathNodes(); if (weapons[id] && !equipped.includes(id)) { equipped.push(id); weaponRanks[id] = 1; } if (!weapons[id]) applyUpgrade(id); levelOverlay.classList.add('hidden'); running = true; statusValue.textContent = `${(weapons[id] || upgradeTypes[id]).name} UNLOCKED / PATH EXPANDED`; updateHud(); })); levelOverlay.classList.remove('hidden');
 }
 function update(dt) {
   if (!running) return; let dx = (keys.has('d') || keys.has('arrowright')) - (keys.has('a') || keys.has('arrowleft')); let dy = (keys.has('s') || keys.has('arrowdown')) - (keys.has('w') || keys.has('arrowup')); const magnitude = Math.hypot(dx, dy) || 1;

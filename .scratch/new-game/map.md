@@ -29,6 +29,7 @@
 - Use a readable cartoon dark-fantasy cast: a crowned armored knight against family-specific monster silhouettes.
 - Expand the build layer with eight weapons and permanent ascension upgrades for damage, haste, vitality, and pickup range.
 - Add Arsenal Mastery so ascension can deepen the current loadout instead of only adding weapons.
+- Add specialist upgrades for critical hits, regeneration, damage immunity, and pickup range.
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

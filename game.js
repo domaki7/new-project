@@ -29,7 +29,10 @@ const upgradeTypes = {
   haste: { name: 'QUICKENED RITE', color: '#edc968', text: '-18% weapon cooldowns' },
   vitality: { name: 'IRON SOUL', color: '#9fd6ff', text: '+35 maximum vitality' },
   magnet: { name: 'GRAVITY HAND', color: '#63d1c2', text: 'collect nodes from farther away' },
-  mastery: { name: 'ARSENAL MASTERY', color: '#a98cff', text: '+18% damage for every equipped weapon' }
+  mastery: { name: 'ARSENAL MASTERY', color: '#a98cff', text: '+18% damage for every equipped weapon' },
+  critical: { name: 'EXECUTIONER RITE', color: '#f2f0d0', text: '15% chance to deal double damage' },
+  regeneration: { name: 'BLOOD OF STARS', color: '#ff9b52', text: 'regenerate 2 vitality each second' },
+  ward: { name: 'CROWNWARD', color: '#9fd6ff', text: 'extend damage invulnerability' }
 };
 const enemyTypes = {
   wisp: { color: '#63d1c2', r: 12, hp: 30, speed: 54, damage: 7, essence: 10 },
@@ -59,6 +62,9 @@ let pickupRange = 34;
 let damageMultiplier = 1;
 let cooldownMultiplier = 1;
 let masteryMultiplier = 1;
+let criticalChance = 0;
+let regeneration = 0;
+let wardDuration = .7;
 const arenaMarks = Array.from({ length: 26 }, () => ({ x: Math.random(), y: Math.random(), r: 18 + Math.random() * 42, alpha: .04 + Math.random() * .08 }));
 
 function resize() {
@@ -71,7 +77,7 @@ function resize() {
 function distance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function nearestEnemy() { return enemies.reduce((nearest, enemy) => !nearest || distance(enemy, player) < distance(nearest, player) ? enemy : nearest, null); }
 function reset() {
-  resize(); level = 1; essence = 0; wave = 1; equipped = ['bolt']; enemies = []; projectiles = []; enemyProjectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0; pickupRange = 34; damageMultiplier = 1; cooldownMultiplier = 1; masteryMultiplier = 1;
+  resize(); level = 1; essence = 0; wave = 1; equipped = ['bolt']; enemies = []; projectiles = []; enemyProjectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0; pickupRange = 34; damageMultiplier = 1; cooldownMultiplier = 1; masteryMultiplier = 1; criticalChance = 0; regeneration = 0; wardDuration = .7;
   player = { x: frame.clientWidth / 2, y: frame.clientHeight / 2, r: 16, hp: 85, maxHp: 85, speed: 220, damage: 22 };
   startOverlay.classList.add('hidden'); deathOverlay.classList.add('hidden'); levelOverlay.classList.add('hidden'); running = true; statusValue.textContent = 'AUTO-CAST ONLINE / CLAIM YOUR CROWN'; updateHud();
 }
@@ -93,7 +99,8 @@ function weaponPower(id) {
   if (id === 'bolt' && equipped.includes('blade')) multiplier += .35;
   if (id === 'nova' && equipped.includes('chain')) multiplier += .3;
   if (id === 'meteor' && equipped.includes('crown')) multiplier += .4;
-  return player.damage * damageMultiplier * masteryMultiplier * multiplier;
+  const critical = Math.random() < criticalChance ? 2 : 1;
+  return player.damage * damageMultiplier * masteryMultiplier * multiplier * critical;
 }
 function fireWeapon(id, target) {
   const weapon = weapons[id]; weaponTimers[id] = weapon.cooldown * cooldownMultiplier; const angle = Math.atan2(target.y - player.y, target.x - player.x); const power = player.damage * damageMultiplier;
@@ -105,9 +112,9 @@ function fireWeapon(id, target) {
   else projectiles.push({ x: player.x, y: player.y, vx: Math.cos(angle) * 560, vy: Math.sin(angle) * 560, r: 7, life: 1.4, damage: id === 'frost' ? power * .9 : power, color: weapon.color, pierce: equipped.includes('blade'), slow: id === 'frost', poison: id === 'venom' });
 }
 function autoCast(dt) { const target = nearestEnemy(); if (!target) return; equipped.forEach(id => { weaponTimers[id] = Math.max(0, (weaponTimers[id] || 0) - dt); if (weaponTimers[id] === 0) fireWeapon(id, target); }); }
-function damagePlayer(amount) { if (invulnerable > 0) return; invulnerable = .7; player.hp -= amount; addParticles(player.x, player.y, '#ed725c', 10); if (player.hp <= 0) { running = false; deathOverlay.classList.remove('hidden'); document.querySelector('#deathCopy').textContent = `The vessel reached rank ${String(level).padStart(2, '0')} with ${essence} essence.`; } }
+function damagePlayer(amount) { if (invulnerable > 0) return; invulnerable = wardDuration; player.hp -= amount; addParticles(player.x, player.y, '#ed725c', 10); if (player.hp <= 0) { running = false; deathOverlay.classList.remove('hidden'); document.querySelector('#deathCopy').textContent = `The vessel reached rank ${String(level).padStart(2, '0')} with ${essence} essence.`; } }
 function collectNode(node) { equipped.push(node.type); nodes = nodes.filter(item => item !== node); statusValue.textContent = `${weapons[node.type].name} NODE CLAIMED / AUTO-CAST ARMED`; addParticles(node.x, node.y, weapons[node.type].color, 15); updateHud(); }
-function applyUpgrade(id) { if (id === 'damage') damageMultiplier *= 1.25; if (id === 'haste') cooldownMultiplier *= .82; if (id === 'vitality') { player.maxHp += 35; player.hp = player.maxHp; } if (id === 'magnet') pickupRange += 20; if (id === 'mastery') masteryMultiplier *= 1.18; }
+function applyUpgrade(id) { if (id === 'damage') damageMultiplier *= 1.25; if (id === 'haste') cooldownMultiplier *= .82; if (id === 'vitality') { player.maxHp += 35; player.hp = player.maxHp; } if (id === 'magnet') pickupRange += 20; if (id === 'mastery') masteryMultiplier *= 1.18; if (id === 'critical') criticalChance += .15; if (id === 'regeneration') regeneration += 2; if (id === 'ward') wardDuration += .35; }
 function offerUpgrade() {
   running = false; level++; const weaponChoices = Object.keys(weapons).filter(id => !equipped.includes(id)).sort(() => Math.random() - .5).slice(0, 2); const upgradeChoice = Object.keys(upgradeTypes)[Math.floor(Math.random() * Object.keys(upgradeTypes).length)];
   const options = [...weaponChoices.map(id => ({ id, weapon: true })), { id: upgradeChoice, weapon: false }];
@@ -117,11 +124,11 @@ function offerUpgrade() {
 function update(dt) {
   if (!running) return; let dx = (keys.has('d') || keys.has('arrowright')) - (keys.has('a') || keys.has('arrowleft')); let dy = (keys.has('s') || keys.has('arrowdown')) - (keys.has('w') || keys.has('arrowup')); const magnitude = Math.hypot(dx, dy) || 1;
   player.x = Math.max(player.r, Math.min(frame.clientWidth - player.r, player.x + dx / magnitude * player.speed * dt)); player.y = Math.max(player.r, Math.min(frame.clientHeight - player.r, player.y + dy / magnitude * player.speed * dt)); invulnerable = Math.max(0, invulnerable - dt); spawnTimer -= dt;
-  if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = Math.max(.18, .9 - wave * .12); } if (Math.random() < dt * .12 && nodes.length < 4) spawnNode(); autoCast(dt);
+  if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = Math.max(.18, .9 - wave * .12); } if (Math.random() < dt * .12 && nodes.length < 4) spawnNode(); player.hp = Math.min(player.maxHp, player.hp + regeneration * dt); autoCast(dt);
   enemies.forEach(enemy => { const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x); const separation = enemy.type === 'oracle' && distance(enemy, player) < 230 ? -1 : 1; const slow = enemy.slow > 0 ? .45 : 1; enemy.slow = Math.max(0, (enemy.slow || 0) - dt); enemy.poison = Math.max(0, (enemy.poison || 0) - dt); enemy.hp -= enemy.poison > 0 ? dt * 7 : 0; enemy.x += Math.cos(angle) * enemy.speed * separation * slow * dt; enemy.y += Math.sin(angle) * enemy.speed * separation * slow * dt; if (enemy.type === 'leech' && Math.random() < dt * .3) player.hp = Math.max(1, player.hp - .7); if (distance(enemy, player) < enemy.r + player.r) damagePlayer(enemy.damage * dt * 1.25); if (enemy.type === 'oracle') { enemy.shotTimer -= dt; if (enemy.shotTimer <= 0) { enemy.shotTimer = 2.4; enemyProjectiles.push({ x: enemy.x, y: enemy.y, vx: Math.cos(angle) * 180, vy: Math.sin(angle) * 180, r: 7, damage: 12, life: 3, color: '#9fd6ff' }); } } if (enemy.type === 'splitter' && Math.random() < dt * .05 && enemies.length < 22) enemies.push({ ...enemy, type: 'wisp', r: 10, hp: 26 + wave * 4, maxHp: 26 + wave * 4, speed: 70 + wave * 3, x: enemy.x + 20, y: enemy.y + 20 }); });
   projectiles.forEach(projectile => { if (projectile.impact) { projectile.life -= dt; if (projectile.life < .35) enemies.filter(enemy => distance(enemy, projectile) < projectile.r).forEach(enemy => enemy.hp -= projectile.damage * dt * 3); } else { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; enemies.forEach(enemy => { if (distance(enemy, projectile) < enemy.r + projectile.r) { enemy.hp -= projectile.damage; if (projectile.slow) enemy.slow = 1.8; if (projectile.poison) enemy.poison = 3; if (!projectile.pierce) projectile.life = 0; addParticles(enemy.x, enemy.y, projectile.color, 4); } }); } });
   projectiles = projectiles.filter(projectile => projectile.life > 0); enemyProjectiles.forEach(projectile => { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; if (distance(projectile, player) < projectile.r + player.r) { damagePlayer(projectile.damage); projectile.life = 0; } }); enemyProjectiles = enemyProjectiles.filter(projectile => projectile.life > 0); enemies = enemies.filter(enemy => { if (enemy.hp <= 0) { essence += enemy.essence; addParticles(enemy.x, enemy.y, enemyTypes[enemy.type].color, 8); if (essence >= level * 100) offerUpgrade(); return false; } return true; });
-  nodes.forEach(node => { node.life -= dt; if (distance(node, player) < node.r + player.r) collectNode(node); }); nodes = nodes.filter(node => node.life > 0); particles.forEach(particle => { particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.life -= dt; }); particles = particles.filter(particle => particle.life > 0); if (enemies.length > 10 + wave * 3) wave = Math.min(5, wave + 1); updateHud();
+  nodes.forEach(node => { node.life -= dt; if (distance(node, player) < node.r + pickupRange) collectNode(node); }); nodes = nodes.filter(node => node.life > 0); particles.forEach(particle => { particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.life -= dt; }); particles = particles.filter(particle => particle.life > 0); if (enemies.length > 10 + wave * 3) wave = Math.min(5, wave + 1); updateHud();
 }
 function drawEquippedWeapons() {
   if (!player || !equipped.length) return;

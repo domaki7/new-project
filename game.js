@@ -12,6 +12,24 @@ const statusValue = document.querySelector('#statusValue');
 const healthBar = document.querySelector('#healthBar');
 const nodePills = document.querySelector('#nodePills');
 const cooldownValue = document.querySelector('#cooldownValue');
+const crownCoinsValue = document.createElement('strong');
+const deathShop = document.createElement('div');
+const meta = JSON.parse(localStorage.getItem('crown-absolute-meta') || '{"coins":0,"damage":0,"vitality":0,"magnet":0}');
+const metaUpgrades = {
+  damage: { name: 'CROWN EDGE', text: '+8% starting weapon power', cost: 30 },
+  vitality: { name: 'THRONE OF IRON', text: '+12 starting vitality', cost: 35 },
+  magnet: { name: 'SOVEREIGN GRASP', text: '+12 pickup range', cost: 25 }
+};
+function saveMeta() { localStorage.setItem('crown-absolute-meta', JSON.stringify(meta)); }
+function buildDeathShop() {
+  crownCoinsValue.textContent = `${meta.coins} COINS`;
+  crownCoinsValue.style.cssText = 'display:block;margin-top:18px;color:#edc968;font:500 14px "DM Mono",monospace;letter-spacing:.08em';
+  deathShop.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;max-width:620px;margin-top:18px';
+  deathShop.replaceChildren();
+  Object.entries(metaUpgrades).forEach(([id, upgrade]) => { const button = document.createElement('button'); button.textContent = `${upgrade.name} · ${upgrade.cost}`; button.style.cssText = 'padding:9px;border:1px solid #edc968;color:#edc968;background:#172640;cursor:pointer;font:500 9px "DM Mono",monospace'; button.onclick = () => { if (meta.coins < upgrade.cost) return; meta.coins -= upgrade.cost; meta[id]++; saveMeta(); buildDeathShop(); }; deathShop.append(button); });
+  deathOverlay.append(crownCoinsValue, deathShop);
+}
+buildDeathShop();
 const pathBadge = document.createElement('strong');
 pathBadge.textContent = 'UNARMED';
 pathBadge.style.cssText = 'display:inline-block;margin-left:18px;color:#63d1c2;font:500 12px "DM Mono",monospace;letter-spacing:.08em';
@@ -94,8 +112,8 @@ function distance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function nearestEnemy() { return enemies.reduce((nearest, enemy) => !nearest || distance(enemy, player) < distance(nearest, player) ? enemy : nearest, null); }
 function ascensionThreshold() { return 240 + (level - 1) * 190; }
 function reset() {
-  resize(); level = 1; essence = 0; wave = 1; equipped = []; weaponRanks = {}; weaponFamily = null; enemies = []; projectiles = []; enemyProjectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0; pickupRange = 34; damageMultiplier = 1; cooldownMultiplier = 1; masteryMultiplier = 1; criticalChance = 0; regeneration = 0; wardDuration = .7; meleeFlash = 0;
-  player = { x: frame.clientWidth / 2, y: frame.clientHeight / 2, r: 16, hp: 85, maxHp: 85, speed: 220, damage: 22 };
+  resize(); level = 1; essence = 0; wave = 1; equipped = []; weaponRanks = {}; weaponFamily = null; enemies = []; projectiles = []; enemyProjectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0; pickupRange = 34 + meta.magnet * 12; damageMultiplier = 1 + meta.damage * .08; cooldownMultiplier = 1; masteryMultiplier = 1; criticalChance = 0; regeneration = 0; wardDuration = .7; meleeFlash = 0;
+  player = { x: frame.clientWidth / 2, y: frame.clientHeight / 2, r: 16, hp: 85 + meta.vitality * 12, maxHp: 85 + meta.vitality * 12, speed: 220, damage: 22 };
   nodes.push({ x: player.x + 72, y: player.y, r: 17, type: Math.random() < .5 ? 'blade' : 'bolt', life: 40 });
   startOverlay.classList.add('hidden'); deathOverlay.classList.add('hidden'); levelOverlay.classList.add('hidden'); running = true; statusValue.textContent = 'AUTO-CAST ONLINE / CLAIM YOUR CROWN'; updateHud();
 }
@@ -132,7 +150,7 @@ function fireWeapon(id, target) {
   else projectiles.push({ x: player.x, y: player.y, vx: Math.cos(angle) * 560, vy: Math.sin(angle) * 560, r: id === 'venom' ? 9 : 7, life: 1.4, damage: id === 'frost' ? power * .9 : power, color: weapon.color, weapon: id, pierce: equipped.includes('blade'), slow: id === 'frost', poison: id === 'venom' });
 }
 function autoCast(dt) { const target = nearestEnemy(); if (!target) return; equipped.filter(id => weapons[id]).forEach(id => { weaponTimers[id] = Math.max(0, (weaponTimers[id] || 0) - dt); if (weaponTimers[id] === 0 && (id !== 'blade' || distance(target, player) <= 110)) fireWeapon(id, target); }); }
-function damagePlayer(amount) { if (invulnerable > 0) return; invulnerable = wardDuration; player.hp -= amount; addParticles(player.x, player.y, '#ed725c', 10); if (player.hp <= 0) { running = false; deathOverlay.classList.remove('hidden'); document.querySelector('#deathCopy').textContent = `The vessel reached rank ${String(level).padStart(2, '0')} with ${essence} essence.`; } }
+function damagePlayer(amount) { if (invulnerable > 0) return; invulnerable = wardDuration; player.hp -= amount; addParticles(player.x, player.y, '#ed725c', 10); if (player.hp <= 0) { running = false; meta.coins += Math.max(5, Math.floor(essence / 12) + level * 3); saveMeta(); buildDeathShop(); deathOverlay.classList.remove('hidden'); document.querySelector('#deathCopy').textContent = `The vessel reached rank ${String(level).padStart(2, '0')} with ${essence} essence. Spend your Crown Coins before returning.`; } }
 function collectNode(node) { const isWeapon = Boolean(weapons[node.type]); if (isWeapon) { if (!weaponFamily) weaponFamily = weapons[node.type].family; weaponRanks[node.type] = (weaponRanks[node.type] || 0) + 1; if (!equipped.includes(node.type) && equipped.filter(id => weapons[id]).length < maxWeapons) equipped.push(node.type); } else equipped.push(node.type); nodes = nodes.filter(item => item !== node); const item = weapons[node.type] || nodeUpgrades[node.type]; if (nodeUpgrades[node.type]) applyUpgrade(node.type); statusValue.textContent = `${item.name} ${isWeapon && weaponRanks[node.type] > 1 ? `RANK ${weaponRanks[node.type]}` : 'CLAIMED'} / ${weaponFamily ? weaponFamily.toUpperCase() : 'BUILD'} PATH`; addParticles(node.x, node.y, item.color, 15); updateHud(); }
 function applyUpgrade(id) { if (id === 'damage') damageMultiplier *= 1.25; if (id === 'haste') cooldownMultiplier *= .82; if (id === 'vitality') { player.maxHp += 35; player.hp = player.maxHp; } if (id === 'magnet') pickupRange += 20; if (id === 'mastery') masteryMultiplier *= 1.18; if (id === 'critical') criticalChance += .15; if (id === 'regeneration') regeneration += 2; if (id === 'ward') wardDuration += .35; }
 function offerUpgrade() {

@@ -38,6 +38,7 @@
 - Show the active path and weapon slot count in the HUD, while keeping all equipped weapons active together.
 - Render framed floor pickup cards with full names and MELEE, RANGED, or UPGRADE labels.
 - Make nearby relic cards brighter and larger while keeping distant drops visually restrained.
+- Award persistent Crown Coins on death for permanent starting power, vitality, and pickup-range upgrades.
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

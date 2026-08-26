@@ -111,6 +111,7 @@ function resize() {
 }
 function distance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function nearestEnemy() { return enemies.reduce((nearest, enemy) => !nearest || distance(enemy, player) < distance(nearest, player) ? enemy : nearest, null); }
+function ascensionThreshold() { return 240 + (level - 1) * 190; }
 function reset() {
   resize(); level = 1; essence = 0; wave = 1; equipped = []; weaponRanks = {}; weaponFamily = null; enemies = []; projectiles = []; enemyProjectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0; pickupRange = 34 + meta.magnet * 12; damageMultiplier = 1 + meta.damage * .08; cooldownMultiplier = 1; masteryMultiplier = 1; criticalChance = 0; regeneration = 0; wardDuration = .7; meleeFlash = 0;
   player = { x: frame.clientWidth / 2, y: frame.clientHeight / 2, r: 16, hp: 85 + meta.vitality * 12, maxHp: 85 + meta.vitality * 12, speed: 220, damage: 22 };
@@ -155,7 +156,8 @@ function collectNode(node) { const isWeapon = Boolean(weapons[node.type]); if (i
 function applyUpgrade(id) { if (id === 'damage') damageMultiplier *= 1.25; if (id === 'haste') cooldownMultiplier *= .82; if (id === 'vitality') { player.maxHp += 35; player.hp = player.maxHp; } if (id === 'magnet') pickupRange += 20; if (id === 'mastery') masteryMultiplier *= 1.18; if (id === 'critical') criticalChance += .15; if (id === 'regeneration') regeneration += 2; if (id === 'ward') wardDuration += .35; }
 function nodeWeb() {
   const root = `core-${weaponFamily}`;
-  const ids = Object.keys(weapons).filter(id => weapons[id].family === weaponFamily).concat(Object.keys(upgradeTypes).filter(id => upgradeTypes[id].family === weaponFamily));
+  const weaponIds = Object.keys(weapons).filter(id => weapons[id].family === weaponFamily && (equipped.includes(id) || equipped.filter(item => weapons[item]).length < maxWeapons));
+  const ids = weaponIds.concat(Object.keys(upgradeTypes).filter(id => upgradeTypes[id].family === weaponFamily));
   const positions = { 0: [45, 6], 1: [12, 28], 2: [45, 28], 3: [78, 28], 4: [12, 53], 5: [45, 53], 6: [78, 53], 7: [28, 78], 8: [62, 78], 9: [84, 78] };
   const nodesForWeb = [{ id: root, name: `${weaponFamily} core`, text: 'choose your dominion', root: true }, ...ids.map(id => ({ id, name: (weapons[id] || upgradeTypes[id]).name, text: (weapons[id] || upgradeTypes[id]).text }))];
   const edges = nodesForWeb.slice(1).map((node, index) => [index < 3 ? root : nodesForWeb[Math.floor((index - 1) / 3) + 1].id, node.id]);
@@ -165,7 +167,7 @@ function nodeWeb() {
 }
 function offerUpgrade() {
   running = false; level++; choices.innerHTML = nodeWeb();
-  choices.querySelectorAll('.web-node.available').forEach(button => button.addEventListener('click', () => { const id = button.dataset.id; unlockedNodes.add(id); if (weapons[id] && !equipped.includes(id)) { equipped.push(id); weaponRanks[id] = 1; } if (!weapons[id]) applyUpgrade(id); levelOverlay.classList.add('hidden'); running = true; statusValue.textContent = `${(weapons[id] || upgradeTypes[id]).name} UNLOCKED / PATH EXPANDED`; updateHud(); })); levelOverlay.classList.remove('hidden');
+  choices.querySelectorAll('.web-node.available').forEach(button => button.addEventListener('click', () => { const id = button.dataset.id; if (weapons[id] && !equipped.includes(id) && equipped.filter(item => weapons[item]).length >= maxWeapons) return; unlockedNodes.add(id); if (weapons[id] && !equipped.includes(id)) { equipped.push(id); weaponRanks[id] = 1; } if (!weapons[id]) applyUpgrade(id); levelOverlay.classList.add('hidden'); running = true; statusValue.textContent = `${(weapons[id] || upgradeTypes[id]).name} UNLOCKED / PATH EXPANDED`; updateHud(); })); levelOverlay.classList.remove('hidden');
 }
 function update(dt) {
   if (!running) return; let dx = (keys.has('d') || keys.has('arrowright')) - (keys.has('a') || keys.has('arrowleft')); let dy = (keys.has('s') || keys.has('arrowdown')) - (keys.has('w') || keys.has('arrowup')); const magnitude = Math.hypot(dx, dy) || 1;

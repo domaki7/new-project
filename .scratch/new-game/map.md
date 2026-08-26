@@ -37,6 +37,7 @@
 - Allow five distinct weapons to remain equipped and auto-casting together; duplicates rank up existing weapons.
 - Show the active path and weapon slot count in the HUD, while keeping all equipped weapons active together.
 - Replace random ascension cards with a connected family-specific unlock web and selectable frontier nodes.
+- Enforce the five-weapon cap at both web display and unlock time; leave passive upgrades available.
 - Render framed floor pickup cards with full names and MELEE, RANGED, or UPGRADE labels.
 - Make nearby relic cards brighter and larger while keeping distant drops visually restrained.
 - Award persistent Crown Coins on death for permanent starting power, vitality, and pickup-range upgrades.

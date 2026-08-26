@@ -27,11 +27,13 @@ const enemyTypes = {
   charger: { color: '#edc968', r: 15, hp: 55, speed: 105, damage: 11, essence: 18 },
   splitter: { color: '#a98cff', r: 17, hp: 75, speed: 42, damage: 8, essence: 20 },
   leech: { color: '#ff9b52', r: 13, hp: 42, speed: 68, damage: 9, essence: 16 },
+  oracle: { color: '#9fd6ff', r: 18, hp: 68, speed: 28, damage: 12, essence: 24 },
   regent: { color: '#f2f0d0', r: 34, hp: 520, speed: 19, damage: 28, essence: 140 }
 };
 let player;
 let enemies = [];
 let projectiles = [];
+let enemyProjectiles = [];
 let nodes = [];
 let particles = [];
 let equipped = [];
@@ -54,7 +56,7 @@ function resize() {
 function distance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function nearestEnemy() { return enemies.reduce((nearest, enemy) => !nearest || distance(enemy, player) < distance(nearest, player) ? enemy : nearest, null); }
 function reset() {
-  resize(); level = 1; essence = 0; wave = 1; equipped = ['bolt']; enemies = []; projectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0;
+  resize(); level = 1; essence = 0; wave = 1; equipped = ['bolt']; enemies = []; projectiles = []; enemyProjectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0;
   player = { x: frame.clientWidth / 2, y: frame.clientHeight / 2, r: 16, hp: 85, maxHp: 85, speed: 220, damage: 22 };
   startOverlay.classList.add('hidden'); deathOverlay.classList.add('hidden'); levelOverlay.classList.add('hidden'); running = true; statusValue.textContent = 'AUTO-CAST ONLINE / CLAIM YOUR CROWN'; updateHud();
 }
@@ -66,8 +68,8 @@ function updateHud() {
 function spawnEnemy() {
   const side = Math.floor(Math.random() * 4); const w = frame.clientWidth; const h = frame.clientHeight;
   const x = side % 2 ? Math.random() * w : side === 0 ? -35 : w + 35; const y = side % 2 ? side === 1 ? -35 : h + 35 : Math.random() * h;
-  const roll = Math.random(); const type = wave >= 5 && roll < .08 ? 'regent' : roll < .16 ? 'brute' : roll < .34 ? 'charger' : roll < .5 ? 'splitter' : roll < .66 ? 'leech' : 'wisp'; const base = enemyTypes[type];
-  enemies.push({ x, y, type, r: base.r, hp: base.hp + wave * 14, maxHp: base.hp + wave * 14, speed: base.speed + wave * 4, damage: base.damage, essence: base.essence });
+  const roll = Math.random(); const type = wave >= 5 && roll < .08 ? 'regent' : roll < .16 ? 'brute' : roll < .3 ? 'charger' : roll < .44 ? 'splitter' : roll < .58 ? 'leech' : roll < .72 ? 'oracle' : 'wisp'; const base = enemyTypes[type];
+  enemies.push({ x, y, type, r: base.r, hp: base.hp + wave * 14, maxHp: base.hp + wave * 14, speed: base.speed + wave * 4, damage: base.damage, essence: base.essence, shotTimer: 1.5 });
 }
 function spawnNode() { const ids = Object.keys(weapons).filter(id => !equipped.includes(id)); if (!ids.length) return; const type = ids[Math.floor(Math.random() * ids.length)]; nodes.push({ x: 70 + Math.random() * (frame.clientWidth - 140), y: 70 + Math.random() * (frame.clientHeight - 140), r: 17, type, life: 25 }); }
 function addParticles(x, y, color, amount = 5) { for (let i = 0; i < amount; i++) particles.push({ x, y, vx: (Math.random() - .5) * 150, vy: (Math.random() - .5) * 150, life: .45, color }); }
@@ -98,15 +100,15 @@ function update(dt) {
   if (!running) return; let dx = (keys.has('d') || keys.has('arrowright')) - (keys.has('a') || keys.has('arrowleft')); let dy = (keys.has('s') || keys.has('arrowdown')) - (keys.has('w') || keys.has('arrowup')); const magnitude = Math.hypot(dx, dy) || 1;
   player.x = Math.max(player.r, Math.min(frame.clientWidth - player.r, player.x + dx / magnitude * player.speed * dt)); player.y = Math.max(player.r, Math.min(frame.clientHeight - player.r, player.y + dy / magnitude * player.speed * dt)); invulnerable = Math.max(0, invulnerable - dt); spawnTimer -= dt;
   if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = Math.max(.18, .9 - wave * .12); } if (Math.random() < dt * .12 && nodes.length < 4) spawnNode(); autoCast(dt);
-  enemies.forEach(enemy => { const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x); enemy.x += Math.cos(angle) * enemy.speed * dt; enemy.y += Math.sin(angle) * enemy.speed * dt; if (enemy.type === 'leech' && Math.random() < dt * .3) player.hp = Math.max(1, player.hp - .7); if (distance(enemy, player) < enemy.r + player.r) damagePlayer(enemy.damage * dt * 1.25); if (enemy.type === 'splitter' && Math.random() < dt * .05 && enemies.length < 22) enemies.push({ ...enemy, type: 'wisp', r: 10, hp: 26 + wave * 4, maxHp: 26 + wave * 4, speed: 70 + wave * 3, x: enemy.x + 20, y: enemy.y + 20 }); });
+  enemies.forEach(enemy => { const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x); const separation = enemy.type === 'oracle' && distance(enemy, player) < 230 ? -1 : 1; enemy.x += Math.cos(angle) * enemy.speed * separation * dt; enemy.y += Math.sin(angle) * enemy.speed * separation * dt; if (enemy.type === 'leech' && Math.random() < dt * .3) player.hp = Math.max(1, player.hp - .7); if (distance(enemy, player) < enemy.r + player.r) damagePlayer(enemy.damage * dt * 1.25); if (enemy.type === 'oracle') { enemy.shotTimer -= dt; if (enemy.shotTimer <= 0) { enemy.shotTimer = 2.4; enemyProjectiles.push({ x: enemy.x, y: enemy.y, vx: Math.cos(angle) * 180, vy: Math.sin(angle) * 180, r: 7, damage: 12, life: 3, color: '#9fd6ff' }); } } if (enemy.type === 'splitter' && Math.random() < dt * .05 && enemies.length < 22) enemies.push({ ...enemy, type: 'wisp', r: 10, hp: 26 + wave * 4, maxHp: 26 + wave * 4, speed: 70 + wave * 3, x: enemy.x + 20, y: enemy.y + 20 }); });
   projectiles.forEach(projectile => { if (projectile.impact) { projectile.life -= dt; if (projectile.life < .35) enemies.filter(enemy => distance(enemy, projectile) < projectile.r).forEach(enemy => enemy.hp -= projectile.damage * dt * 3); } else { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; enemies.forEach(enemy => { if (distance(enemy, projectile) < enemy.r + projectile.r) { enemy.hp -= projectile.damage; if (!projectile.pierce) projectile.life = 0; addParticles(enemy.x, enemy.y, projectile.color, 4); } }); } });
-  projectiles = projectiles.filter(projectile => projectile.life > 0); enemies = enemies.filter(enemy => { if (enemy.hp <= 0) { essence += enemy.essence; addParticles(enemy.x, enemy.y, enemyTypes[enemy.type].color, 8); if (essence >= level * 100) offerUpgrade(); return false; } return true; });
+  projectiles = projectiles.filter(projectile => projectile.life > 0); enemyProjectiles.forEach(projectile => { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; if (distance(projectile, player) < projectile.r + player.r) { damagePlayer(projectile.damage); projectile.life = 0; } }); enemyProjectiles = enemyProjectiles.filter(projectile => projectile.life > 0); enemies = enemies.filter(enemy => { if (enemy.hp <= 0) { essence += enemy.essence; addParticles(enemy.x, enemy.y, enemyTypes[enemy.type].color, 8); if (essence >= level * 100) offerUpgrade(); return false; } return true; });
   nodes.forEach(node => { node.life -= dt; if (distance(node, player) < node.r + player.r) collectNode(node); }); nodes = nodes.filter(node => node.life > 0); particles.forEach(particle => { particle.x += particle.vx * dt; particle.y += particle.vy * dt; particle.life -= dt; }); particles = particles.filter(particle => particle.life > 0); if (enemies.length > 10 + wave * 3) wave = Math.min(5, wave + 1); updateHud();
 }
 function draw() {
   const w = frame.clientWidth; const h = frame.clientHeight; ctx.clearRect(0, 0, w, h); ctx.strokeStyle = '#ffffff0c'; for (let x = 0; x < w; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); } for (let y = 0; y < h; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
   nodes.forEach(node => { const weapon = weapons[node.type]; ctx.beginPath(); ctx.arc(node.x, node.y, 31 + Math.sin(Date.now() / 160) * 5, 0, Math.PI * 2); ctx.fillStyle = `${weapon.color}22`; ctx.fill(); ctx.beginPath(); ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2); ctx.fillStyle = weapon.color; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#172326'; ctx.font = 'bold 12px DM Mono'; ctx.textAlign = 'center'; ctx.fillText(weapon.name[0], node.x, node.y + 4); });
-  projectiles.forEach(projectile => { ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.r, 0, Math.PI * 2); ctx.fillStyle = `${projectile.color}cc`; ctx.fill(); });
+  projectiles.forEach(projectile => { ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.r, 0, Math.PI * 2); ctx.fillStyle = `${projectile.color}cc`; ctx.fill(); }); enemyProjectiles.forEach(projectile => { ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.r + 4, 0, Math.PI * 2); ctx.fillStyle = '#9fd6ff44'; ctx.fill(); ctx.beginPath(); ctx.arc(projectile.x, projectile.y, projectile.r, 0, Math.PI * 2); ctx.fillStyle = projectile.color; ctx.fill(); });
   enemies.forEach(enemy => { const type = enemyTypes[enemy.type]; ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.r + 6 + Math.sin(Date.now() / 120) * 2, 0, Math.PI * 2); ctx.strokeStyle = `${type.color}55`; ctx.stroke(); ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.r, 0, Math.PI * 2); ctx.fillStyle = '#101d22'; ctx.fill(); ctx.strokeStyle = type.color; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = type.color; ctx.fillRect(enemy.x - 5, enemy.y - 3, 4, 4); ctx.fillRect(enemy.x + 2, enemy.y - 3, 4, 4); ctx.fillStyle = '#ed725c'; ctx.fillRect(enemy.x - enemy.r, enemy.y - enemy.r - 7, enemy.r * 2 * Math.max(0, enemy.hp / enemy.maxHp), 3); });
   particles.forEach(particle => { ctx.globalAlpha = Math.max(0, particle.life * 2); ctx.beginPath(); ctx.arc(particle.x, particle.y, 3, 0, Math.PI * 2); ctx.fillStyle = particle.color; ctx.fill(); ctx.globalAlpha = 1; });
   if (player) { ctx.globalAlpha = invulnerable > 0 && Math.floor(Date.now() / 80) % 2 ? .35 : 1; ctx.beginPath(); ctx.arc(player.x, player.y, player.r + 10, 0, Math.PI * 2); ctx.strokeStyle = '#63d1c277'; ctx.lineWidth = 3; ctx.stroke(); ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2); ctx.fillStyle = '#edf2e9'; ctx.fill(); ctx.strokeStyle = '#ed725c'; ctx.lineWidth = 3; ctx.stroke(); ctx.globalAlpha = 1; }

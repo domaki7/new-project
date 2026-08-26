@@ -7,6 +7,7 @@
 ## Decisions-so-far
 - Use Wayfinder before implementing the replacement game.
 - Preserve the repository's local Markdown issue workflow.
+- Build an original top-down action RPG about reincarnation, node powers, and ascension.
 
 ## Fog
 - What is the game fantasy and genre?
@@ -14,6 +15,7 @@
 - What does “node-like powerups” refer to specifically?
 - Is the browser demo a faithful slice of the desktop game or only a concept test?
 - Which GitHub repository should host the project?
+- What is the first playable combat and progression slice?
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

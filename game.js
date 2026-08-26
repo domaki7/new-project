@@ -28,7 +28,8 @@ const upgradeTypes = {
   damage: { name: 'WAR BLESSING', color: '#ed725c', text: '+25% weapon damage' },
   haste: { name: 'QUICKENED RITE', color: '#edc968', text: '-18% weapon cooldowns' },
   vitality: { name: 'IRON SOUL', color: '#9fd6ff', text: '+35 maximum vitality' },
-  magnet: { name: 'GRAVITY HAND', color: '#63d1c2', text: 'collect nodes from farther away' }
+  magnet: { name: 'GRAVITY HAND', color: '#63d1c2', text: 'collect nodes from farther away' },
+  mastery: { name: 'ARSENAL MASTERY', color: '#a98cff', text: '+18% damage for every equipped weapon' }
 };
 const enemyTypes = {
   wisp: { color: '#63d1c2', r: 12, hp: 30, speed: 54, damage: 7, essence: 10 },
@@ -57,6 +58,7 @@ let invulnerable = 0;
 let pickupRange = 34;
 let damageMultiplier = 1;
 let cooldownMultiplier = 1;
+let masteryMultiplier = 1;
 const arenaMarks = Array.from({ length: 26 }, () => ({ x: Math.random(), y: Math.random(), r: 18 + Math.random() * 42, alpha: .04 + Math.random() * .08 }));
 
 function resize() {
@@ -69,7 +71,7 @@ function resize() {
 function distance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function nearestEnemy() { return enemies.reduce((nearest, enemy) => !nearest || distance(enemy, player) < distance(nearest, player) ? enemy : nearest, null); }
 function reset() {
-  resize(); level = 1; essence = 0; wave = 1; equipped = ['bolt']; enemies = []; projectiles = []; enemyProjectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0; pickupRange = 34; damageMultiplier = 1; cooldownMultiplier = 1;
+  resize(); level = 1; essence = 0; wave = 1; equipped = ['bolt']; enemies = []; projectiles = []; enemyProjectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0; pickupRange = 34; damageMultiplier = 1; cooldownMultiplier = 1; masteryMultiplier = 1;
   player = { x: frame.clientWidth / 2, y: frame.clientHeight / 2, r: 16, hp: 85, maxHp: 85, speed: 220, damage: 22 };
   startOverlay.classList.add('hidden'); deathOverlay.classList.add('hidden'); levelOverlay.classList.add('hidden'); running = true; statusValue.textContent = 'AUTO-CAST ONLINE / CLAIM YOUR CROWN'; updateHud();
 }
@@ -91,7 +93,7 @@ function weaponPower(id) {
   if (id === 'bolt' && equipped.includes('blade')) multiplier += .35;
   if (id === 'nova' && equipped.includes('chain')) multiplier += .3;
   if (id === 'meteor' && equipped.includes('crown')) multiplier += .4;
-  return player.damage * damageMultiplier * multiplier;
+  return player.damage * damageMultiplier * masteryMultiplier * multiplier;
 }
 function fireWeapon(id, target) {
   const weapon = weapons[id]; weaponTimers[id] = weapon.cooldown * cooldownMultiplier; const angle = Math.atan2(target.y - player.y, target.x - player.x); const power = player.damage * damageMultiplier;
@@ -105,7 +107,7 @@ function fireWeapon(id, target) {
 function autoCast(dt) { const target = nearestEnemy(); if (!target) return; equipped.forEach(id => { weaponTimers[id] = Math.max(0, (weaponTimers[id] || 0) - dt); if (weaponTimers[id] === 0) fireWeapon(id, target); }); }
 function damagePlayer(amount) { if (invulnerable > 0) return; invulnerable = .7; player.hp -= amount; addParticles(player.x, player.y, '#ed725c', 10); if (player.hp <= 0) { running = false; deathOverlay.classList.remove('hidden'); document.querySelector('#deathCopy').textContent = `The vessel reached rank ${String(level).padStart(2, '0')} with ${essence} essence.`; } }
 function collectNode(node) { equipped.push(node.type); nodes = nodes.filter(item => item !== node); statusValue.textContent = `${weapons[node.type].name} NODE CLAIMED / AUTO-CAST ARMED`; addParticles(node.x, node.y, weapons[node.type].color, 15); updateHud(); }
-function applyUpgrade(id) { if (id === 'damage') damageMultiplier *= 1.25; if (id === 'haste') cooldownMultiplier *= .82; if (id === 'vitality') { player.maxHp += 35; player.hp = player.maxHp; } if (id === 'magnet') pickupRange += 20; }
+function applyUpgrade(id) { if (id === 'damage') damageMultiplier *= 1.25; if (id === 'haste') cooldownMultiplier *= .82; if (id === 'vitality') { player.maxHp += 35; player.hp = player.maxHp; } if (id === 'magnet') pickupRange += 20; if (id === 'mastery') masteryMultiplier *= 1.18; }
 function offerUpgrade() {
   running = false; level++; const weaponChoices = Object.keys(weapons).filter(id => !equipped.includes(id)).sort(() => Math.random() - .5).slice(0, 2); const upgradeChoice = Object.keys(upgradeTypes)[Math.floor(Math.random() * Object.keys(upgradeTypes).length)];
   const options = [...weaponChoices.map(id => ({ id, weapon: true })), { id: upgradeChoice, weapon: false }];

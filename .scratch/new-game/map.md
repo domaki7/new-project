@@ -27,6 +27,7 @@
 - Use an original dark-fantasy royal visual direction with a crowned knight vessel, monster silhouettes, and relic-shaped nodes.
 - Show every equipped weapon as a distinct orbiting relic on the knight so power growth is visible in play.
 - Use a readable cartoon dark-fantasy cast: a crowned armored knight against family-specific monster silhouettes.
+- Expand the build layer with eight weapons and permanent ascension upgrades for damage, haste, vitality, and pickup range.
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

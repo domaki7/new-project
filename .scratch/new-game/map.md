@@ -31,6 +31,7 @@
 - Add Arsenal Mastery so ascension can deepen the current loadout instead of only adding weapons.
 - Add specialist upgrades for critical hits, regeneration, damage immunity, and pickup range.
 - Spawn passive upgrade runes alongside weapon nodes as collectible powerups.
+- Slow ascension choices to 240 essence initially, then add 190 essence per level.
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

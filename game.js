@@ -65,6 +65,8 @@ let lastTime = 0;
 let spawnTimer = 0;
 let weaponTimers = {};
 let invulnerable = 0;
+let meleeFlash = 0;
+let meleeAngle = 0;
 let pickupRange = 34;
 let damageMultiplier = 1;
 let cooldownMultiplier = 1;
@@ -85,7 +87,7 @@ function distance(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 function nearestEnemy() { return enemies.reduce((nearest, enemy) => !nearest || distance(enemy, player) < distance(nearest, player) ? enemy : nearest, null); }
 function ascensionThreshold() { return 240 + (level - 1) * 190; }
 function reset() {
-  resize(); level = 1; essence = 0; wave = 1; equipped = ['bolt']; enemies = []; projectiles = []; enemyProjectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0; pickupRange = 34; damageMultiplier = 1; cooldownMultiplier = 1; masteryMultiplier = 1; criticalChance = 0; regeneration = 0; wardDuration = .7;
+  resize(); level = 1; essence = 0; wave = 1; equipped = ['bolt']; enemies = []; projectiles = []; enemyProjectiles = []; nodes = []; particles = []; weaponTimers = {}; invulnerable = 0; spawnTimer = 0; pickupRange = 34; damageMultiplier = 1; cooldownMultiplier = 1; masteryMultiplier = 1; criticalChance = 0; regeneration = 0; wardDuration = .7; meleeFlash = 0;
   player = { x: frame.clientWidth / 2, y: frame.clientHeight / 2, r: 16, hp: 85, maxHp: 85, speed: 220, damage: 22 };
   startOverlay.classList.add('hidden'); deathOverlay.classList.add('hidden'); levelOverlay.classList.add('hidden'); running = true; statusValue.textContent = 'AUTO-CAST ONLINE / CLAIM YOUR CROWN'; updateHud();
 }
@@ -112,14 +114,14 @@ function weaponPower(id) {
 }
 function fireWeapon(id, target) {
   const weapon = weapons[id]; weaponTimers[id] = weapon.cooldown * cooldownMultiplier; const angle = Math.atan2(target.y - player.y, target.x - player.x); const power = player.damage * damageMultiplier;
-  if (id === 'blade') { enemies.filter(enemy => distance(enemy, player) < 86).forEach(enemy => enemy.hp -= weaponPower(id) * 1.4); addParticles(player.x + Math.cos(angle) * 45, player.y + Math.sin(angle) * 45, weapon.color, 12); }
+  if (id === 'blade') { meleeAngle = angle; meleeFlash = .2; enemies.filter(enemy => distance(enemy, player) < 110).forEach(enemy => enemy.hp -= weaponPower(id) * 1.4); addParticles(player.x + Math.cos(angle) * 45, player.y + Math.sin(angle) * 45, weapon.color, 12); }
   else if (id === 'nova') { enemies.filter(enemy => distance(enemy, player) < 150).forEach(enemy => { enemy.hp -= weaponPower(id) * 1.25; enemy.x += Math.cos(angle) * 20; enemy.y += Math.sin(angle) * 20; }); addParticles(player.x, player.y, weapon.color, 20); }
   else if (id === 'chain') { let current = target; for (let i = 0; i < 3 && current; i++) { current.hp -= weaponPower(id) * 1.1; addParticles(current.x, current.y, weapon.color, 4); current = enemies.find(enemy => enemy !== current && distance(enemy, current) < 130 && enemy.hp > 0); } }
   else if (id === 'meteor') projectiles.push({ x: target.x, y: target.y, r: 42, life: .5, damage: power * 2.5, color: weapon.color, impact: true });
   else if (id === 'storm') enemies.filter(enemy => distance(enemy, target) < 180).slice(0, 4).forEach(enemy => { enemy.hp -= power * 1.1; addParticles(enemy.x, enemy.y, weapon.color, 5); });
   else projectiles.push({ x: player.x, y: player.y, vx: Math.cos(angle) * 560, vy: Math.sin(angle) * 560, r: 7, life: 1.4, damage: id === 'frost' ? power * .9 : power, color: weapon.color, pierce: equipped.includes('blade'), slow: id === 'frost', poison: id === 'venom' });
 }
-function autoCast(dt) { const target = nearestEnemy(); if (!target) return; equipped.filter(id => weapons[id]).forEach(id => { weaponTimers[id] = Math.max(0, (weaponTimers[id] || 0) - dt); if (weaponTimers[id] === 0) fireWeapon(id, target); }); }
+function autoCast(dt) { const target = nearestEnemy(); if (!target) return; equipped.filter(id => weapons[id]).forEach(id => { weaponTimers[id] = Math.max(0, (weaponTimers[id] || 0) - dt); if (weaponTimers[id] === 0 && (id !== 'blade' || distance(target, player) <= 110)) fireWeapon(id, target); }); }
 function damagePlayer(amount) { if (invulnerable > 0) return; invulnerable = wardDuration; player.hp -= amount; addParticles(player.x, player.y, '#ed725c', 10); if (player.hp <= 0) { running = false; deathOverlay.classList.remove('hidden'); document.querySelector('#deathCopy').textContent = `The vessel reached rank ${String(level).padStart(2, '0')} with ${essence} essence.`; } }
 function collectNode(node) { equipped.push(node.type); nodes = nodes.filter(item => item !== node); const item = weapons[node.type] || nodeUpgrades[node.type]; if (nodeUpgrades[node.type]) applyUpgrade(node.type); statusValue.textContent = `${item.name} CLAIMED / BUILD EVOLVED`; addParticles(node.x, node.y, item.color, 15); updateHud(); }
 function applyUpgrade(id) { if (id === 'damage') damageMultiplier *= 1.25; if (id === 'haste') cooldownMultiplier *= .82; if (id === 'vitality') { player.maxHp += 35; player.hp = player.maxHp; } if (id === 'magnet') pickupRange += 20; if (id === 'mastery') masteryMultiplier *= 1.18; if (id === 'critical') criticalChance += .15; if (id === 'regeneration') regeneration += 2; if (id === 'ward') wardDuration += .35; }
@@ -131,7 +133,7 @@ function offerUpgrade() {
 }
 function update(dt) {
   if (!running) return; let dx = (keys.has('d') || keys.has('arrowright')) - (keys.has('a') || keys.has('arrowleft')); let dy = (keys.has('s') || keys.has('arrowdown')) - (keys.has('w') || keys.has('arrowup')); const magnitude = Math.hypot(dx, dy) || 1;
-  player.x = Math.max(player.r, Math.min(frame.clientWidth - player.r, player.x + dx / magnitude * player.speed * dt)); player.y = Math.max(player.r, Math.min(frame.clientHeight - player.r, player.y + dy / magnitude * player.speed * dt)); invulnerable = Math.max(0, invulnerable - dt); spawnTimer -= dt;
+  player.x = Math.max(player.r, Math.min(frame.clientWidth - player.r, player.x + dx / magnitude * player.speed * dt)); player.y = Math.max(player.r, Math.min(frame.clientHeight - player.r, player.y + dy / magnitude * player.speed * dt)); invulnerable = Math.max(0, invulnerable - dt); meleeFlash = Math.max(0, meleeFlash - dt); spawnTimer -= dt;
   if (spawnTimer <= 0) { spawnEnemy(); spawnTimer = Math.max(.18, .9 - wave * .12); } if (Math.random() < dt * .12 && nodes.length < 4) spawnNode(); player.hp = Math.min(player.maxHp, player.hp + regeneration * dt); autoCast(dt);
   enemies.forEach(enemy => { const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x); const separation = enemy.type === 'oracle' && distance(enemy, player) < 230 ? -1 : 1; const slow = enemy.slow > 0 ? .45 : 1; enemy.slow = Math.max(0, (enemy.slow || 0) - dt); enemy.poison = Math.max(0, (enemy.poison || 0) - dt); enemy.hp -= enemy.poison > 0 ? dt * 7 : 0; enemy.x += Math.cos(angle) * enemy.speed * separation * slow * dt; enemy.y += Math.sin(angle) * enemy.speed * separation * slow * dt; if (enemy.type === 'leech' && Math.random() < dt * .3) player.hp = Math.max(1, player.hp - .7); if (distance(enemy, player) < enemy.r + player.r) damagePlayer(enemy.damage * dt * 1.25); if (enemy.type === 'oracle') { enemy.shotTimer -= dt; if (enemy.shotTimer <= 0) { enemy.shotTimer = 2.4; enemyProjectiles.push({ x: enemy.x, y: enemy.y, vx: Math.cos(angle) * 180, vy: Math.sin(angle) * 180, r: 7, damage: 12, life: 3, color: '#9fd6ff' }); } } if (enemy.type === 'splitter' && Math.random() < dt * .05 && enemies.length < 22) enemies.push({ ...enemy, type: 'wisp', r: 10, hp: 26 + wave * 4, maxHp: 26 + wave * 4, speed: 70 + wave * 3, x: enemy.x + 20, y: enemy.y + 20 }); });
   projectiles.forEach(projectile => { if (projectile.impact) { projectile.life -= dt; if (projectile.life < .35) enemies.filter(enemy => distance(enemy, projectile) < projectile.r).forEach(enemy => enemy.hp -= projectile.damage * dt * 3); } else { projectile.x += projectile.vx * dt; projectile.y += projectile.vy * dt; projectile.life -= dt; enemies.forEach(enemy => { if (distance(enemy, projectile) < enemy.r + projectile.r) { enemy.hp -= projectile.damage; if (projectile.slow) enemy.slow = 1.8; if (projectile.poison) enemy.poison = 3; if (!projectile.pierce) projectile.life = 0; addParticles(enemy.x, enemy.y, projectile.color, 4); } }); } });
@@ -168,6 +170,7 @@ function drawMonster(enemy, type) {
 }
 function draw() {
   const w = frame.clientWidth; const h = frame.clientHeight; ctx.clearRect(0, 0, w, h);
+  if (player && meleeFlash > 0) { ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(meleeAngle); ctx.beginPath(); ctx.arc(0, 0, 82, -.95, .95); ctx.strokeStyle = '#edc968'; ctx.lineWidth = 10; ctx.globalAlpha = meleeFlash / .2; ctx.stroke(); ctx.restore(); }
   const floor = ctx.createRadialGradient(w * .5, h * .45, 40, w * .5, h * .5, Math.max(w, h) * .7); floor.addColorStop(0, '#293b60'); floor.addColorStop(.55, '#172640'); floor.addColorStop(1, '#091321'); ctx.fillStyle = floor; ctx.fillRect(0, 0, w, h);
   arenaMarks.forEach(mark => { ctx.beginPath(); ctx.arc(mark.x * w, mark.y * h, mark.r, 0, Math.PI * 2); ctx.fillStyle = `rgba(99, 209, 194, ${mark.alpha})`; ctx.fill(); });
   ctx.strokeStyle = '#ffffff0b';

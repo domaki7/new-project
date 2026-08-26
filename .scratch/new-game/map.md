@@ -9,6 +9,7 @@
 - Preserve the repository's local Markdown issue workflow.
 - Build an original top-down action RPG about reincarnation, node powers, and ascension.
 - First playable project is named Ascendant Nodes and uses a browser-first vanilla stack.
+- Project identity is Crown of the Absolute: an original overlord-god fantasy.
 
 ## Fog
 - What is the game fantasy and genre?
@@ -18,6 +19,7 @@
 - Which GitHub repository should host the project?
 - What is the first playable combat and progression slice?
 - Expand the first slice with authored enemy types, more node interactions, and persistent ascension progression.
+- Build weapon-combination choices around melee, ranged, area, chain, and impact node weapons.
 
 ## Tickets
 - [01 Game concept](issues/01-game-concept.md)

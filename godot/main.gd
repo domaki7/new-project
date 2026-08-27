@@ -396,6 +396,9 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
         var body := PackedVector2Array([position + Vector2(-radius, -radius * .55), position + Vector2(-radius * .7, -radius), position + Vector2(radius * .7, -radius), position + Vector2(radius, -radius * .55), position + Vector2(radius * .8, radius), position + Vector2(-radius * .8, radius)])
         draw_colored_polygon(body, Color("101826")); draw_polyline(PackedVector2Array([body[0], body[1], body[2], body[3], body[4], body[5], body[0]]), data.color, 3.0)
         draw_line(position + Vector2(-radius * .65, -radius * .7), position + Vector2(-radius * .35, -radius - 10), data.color, 4.0); draw_line(position + Vector2(radius * .35, -radius * .7), position + Vector2(radius * .65, -radius - 10), data.color, 4.0)
+        if enemy.type == "DREAD REGENT":
+            var crown := PackedVector2Array([position + Vector2(-radius * .7, -radius * .8), position + Vector2(-radius * .45, -radius * 1.35), position + Vector2(-radius * .12, -radius * .95), position + Vector2(radius * .2, -radius * 1.4), position + Vector2(radius * .65, -radius * .78)])
+            draw_polyline(crown, Color("edc968"), 4.0)
     elif enemy.type == "CHARGER":
         var horned := PackedVector2Array([position + Vector2(radius + 9, 0), position + Vector2(0, radius), position + Vector2(-radius, radius * .45), position + Vector2(-radius, -radius * .45), position + Vector2(0, -radius)])
         draw_colored_polygon(horned, Color("101826")); draw_polyline(PackedVector2Array([horned[0], horned[1], horned[2], horned[3], horned[4], horned[0]]), data.color, 3.0)
@@ -408,7 +411,10 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
         draw_colored_polygon(wisp, Color("101826")); draw_polyline(PackedVector2Array([wisp[0], wisp[1], wisp[2], wisp[3], wisp[0]]), data.color, 3.0)
     draw_circle(position - Vector2(radius * .25, radius * .28), radius * .25, Color(data.color, 0.16))
     draw_circle(position + Vector2(radius * .25, -radius * .18), 3.0, data.color); draw_circle(position + Vector2(radius * .25, radius * .18), 3.0, data.color)
-    draw_rect(Rect2(position + Vector2(-radius, -radius - 12), Vector2(radius * 2.0 * max(0.0, enemy.health / enemy.max_health), 4)), Color("ed725c"))
+    var health_ratio: float = max(0.0, enemy.health / enemy.max_health)
+    var meter := Rect2(position + Vector2(-radius, -radius - 14), Vector2(radius * 2.0, 6.0))
+    draw_rect(meter, Color(0.02, 0.04, 0.07, 0.9))
+    draw_rect(Rect2(meter.position + Vector2(1, 1), Vector2(max(0.0, (meter.size.x - 2.0) * health_ratio), 4.0)), Color("ed725c"))
 
 func draw_ellipse_custom(center: Vector2, radius: Vector2, color: Color) -> void:
     var points := PackedVector2Array()

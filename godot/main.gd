@@ -33,6 +33,7 @@ const MONSTERS := {
 }
 
 var player := {"position": Vector2(640, 360), "health": 85.0, "max_health": 85.0, "speed": 235.0}
+var player_velocity := Vector2.ZERO
 var enemies: Array[Dictionary] = []
 var projectiles: Array[Dictionary] = []
 var pickups: Array[Dictionary] = []
@@ -189,7 +190,7 @@ func save_path_nodes() -> void:
 
 func start_game() -> void:
     mode = "play"
-    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
+    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
@@ -203,7 +204,10 @@ func update_game(delta: float) -> void:
     if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): movement.x += 1
     if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP): movement.y -= 1
     if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): movement.y += 1
-    if movement.length() > 0: player.position += movement.normalized() * player.speed * delta
+    var target_velocity: Vector2 = movement.normalized() * player.speed if movement.length() > 0 else Vector2.ZERO
+    var steering: float = 1500.0 if movement.length() > 0 else 1900.0
+    player_velocity = player_velocity.move_toward(target_velocity, steering * delta)
+    player.position += player_velocity * delta
     player.position.x = clamp(player.position.x, 35.0, ARENA_SIZE.x - 35.0)
     player.position.y = clamp(player.position.y, 35.0, ARENA_SIZE.y - 35.0)
     spawn_timer -= delta; pickup_timer -= delta

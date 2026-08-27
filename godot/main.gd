@@ -449,6 +449,11 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
     draw_circle(eye_center - gaze_side * radius * 0.18, 3.0, enemy_color)
     draw_circle(eye_center + gaze_side * radius * 0.18, 3.0, enemy_color)
     draw_circle(position + Vector2(-radius * 0.3, radius * 0.45), radius * 0.16, Color(enemy_color, 0.18))
+    if enemy.slow > 0.0:
+        draw_arc(position, radius + 8.0, elapsed * 1.8, elapsed * 1.8 + PI * 1.3, 16, Color(0.62, 0.84, 1.0, 0.6), 2.0)
+    if enemy.poison > 0.0:
+        draw_circle(position + Vector2(sin(elapsed * 4.0) * radius * 0.5, cos(elapsed * 3.0) * radius * 0.4), 3.0, Color("8ed66b"))
+        draw_circle(position + Vector2(cos(elapsed * 3.5) * radius * 0.45, sin(elapsed * 4.5) * radius * 0.35), 2.0, Color("d9ffb7"))
     if enemy.hit_flash > 0.0:
         draw_arc(position, radius + 5.0, 0, TAU, 20, Color(1.0, 0.9, 0.65, enemy.hit_flash / 0.14), 3.0)
     draw_circle(position - Vector2(radius * .25, radius * .28), radius * .25, Color(enemy_color, 0.16))

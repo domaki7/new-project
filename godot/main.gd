@@ -399,7 +399,7 @@ func buy_meta(kind: String, cost: int) -> void:
 func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
     var position: Vector2 = enemy.position
     var radius: float = enemy.radius
-    draw_circle(position + Vector2(0, radius + 8), radius * 0.9, Color(0, 0, 0, 0.35))
+    draw_ellipse_custom(position + Vector2(radius * 0.15, radius * 0.72), Vector2(radius * 0.95, radius * 0.3), Color(0, 0, 0, 0.4))
     draw_circle(position, radius + 4, Color(data.color, 0.08))
     if enemy.type == "DREAD REGENT":
         draw_circle(position + Vector2(0, radius * 0.35), radius * 1.35, Color(0.93, 0.79, 0.4, 0.06 + sin(elapsed * 3.0) * 0.02))

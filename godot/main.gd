@@ -397,6 +397,9 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
     var radius: float = enemy.radius
     draw_circle(position + Vector2(0, radius + 8), radius * 0.9, Color(0, 0, 0, 0.35))
     draw_circle(position, radius + 4, Color(data.color, 0.08))
+    if enemy.type == "DREAD REGENT":
+        draw_circle(position + Vector2(0, radius * 0.35), radius * 1.35, Color(0.93, 0.79, 0.4, 0.06 + sin(elapsed * 3.0) * 0.02))
+        draw_arc(position, radius * 1.45, elapsed * 0.7, elapsed * 0.7 + PI * 1.4, 28, Color(0.93, 0.79, 0.4, 0.3), 2.0)
     if enemy.type == "BRUTE" or enemy.type == "DREAD REGENT":
         var body := PackedVector2Array([position + Vector2(-radius, -radius * .55), position + Vector2(-radius * .7, -radius), position + Vector2(radius * .7, -radius), position + Vector2(radius, -radius * .55), position + Vector2(radius * .8, radius), position + Vector2(-radius * .8, radius)])
         draw_colored_polygon(body, Color("101826")); draw_polyline(PackedVector2Array([body[0], body[1], body[2], body[3], body[4], body[5], body[0]]), data.color, 3.0)

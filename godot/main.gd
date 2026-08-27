@@ -67,11 +67,54 @@ var meta_file := "user://crown_meta.cfg"
 var ascension_options: Array[String] = []
 var ascension_positions := [Vector2(390, 385), Vector2(640, 385), Vector2(890, 385)]
 var hud_labels: Dictionary = {}
+var audio_playback: AudioStreamGeneratorPlayback
+var audio_player: AudioStreamPlayer
 
 func _ready() -> void:
     load_meta()
+    setup_audio()
     setup_hud()
     queue_redraw()
+
+func setup_audio() -> void:
+    if DisplayServer.get_name() == "headless": return
+    var audio_stream := AudioStreamGenerator.new()
+    audio_stream.mix_rate = 44100.0
+    audio_stream.buffer_length = 0.6
+    audio_player = AudioStreamPlayer.new()
+    audio_player.stream = audio_stream
+    add_child(audio_player)
+    audio_player.play()
+    audio_playback = audio_player.get_stream_playback() as AudioStreamGeneratorPlayback
+
+func _exit_tree() -> void:
+    audio_playback = null
+    if audio_player:
+        audio_player.stop()
+        audio_player.stream = null
+        audio_player.free()
+    audio_player = null
+
+func play_sfx(kind: String) -> void:
+    if audio_playback == null: return
+    var frequency: float = 220.0
+    var duration: float = 0.1
+    var volume: float = 0.12
+    if kind == "blade": frequency = 520.0; duration = 0.12; volume = 0.16
+    elif kind == "nova": frequency = 110.0; duration = 0.24; volume = 0.18
+    elif kind == "chain": frequency = 300.0; duration = 0.16; volume = 0.15
+    elif kind == "ranged": frequency = 680.0; duration = 0.07; volume = 0.1
+    elif kind == "pickup": frequency = 740.0; duration = 0.18; volume = 0.14
+    elif kind == "damage": frequency = 95.0; duration = 0.2; volume = 0.18
+    elif kind == "defeat": frequency = 180.0; duration = 0.14; volume = 0.12
+    elif kind == "victory": frequency = 440.0; duration = 0.45; volume = 0.16
+    var frame_count: int = int(44100.0 * duration)
+    for frame in frame_count:
+        var time: float = float(frame) / 44100.0
+        var envelope: float = 1.0 - time / duration
+        var sample: float = sin(TAU * frequency * time) * envelope
+        if kind == "damage": sample += sin(TAU * frequency * 0.47 * time) * envelope * 0.45
+        audio_playback.push_frame(Vector2(sample, sample) * volume)
 
 func _process(delta: float) -> void:
     elapsed += delta
@@ -232,6 +275,7 @@ func collect_pickups() -> void:
                     continue
                 unlocked_nodes[id] = true; save_path_nodes(); apply_upgrade(id)
             status = "%s CLAIMED / %s PATH" % [id, weapon_family]
+            play_sfx("pickup")
             pickups.erase(pickup)
     pickups = pickups.filter(func(item: Dictionary) -> bool: return item.life > 0.0)
 
@@ -258,6 +302,7 @@ func fire_weapon(id: String, target: Dictionary) -> void:
     var power: float = weapon_power(id)
     var angle: float = player.position.angle_to_point(target.position)
     if data.kind in ["blade", "nova", "chain"]:
+        play_sfx(data.kind)
         weapon_swings[id] = float(data.get("swing_time", 0.3))
         weapon_swings[id + "_angle"] = angle
         blade_angle = angle
@@ -288,7 +333,9 @@ func fire_weapon(id: String, target: Dictionary) -> void:
         for enemy in enemies:
             if enemy.position.distance_to(target.position) < 185.0: enemy.health -= power * 1.1
     elif data.kind == "meteor": projectiles.append({"position": target.position, "velocity": Vector2.ZERO, "life": 0.5, "radius": 48.0, "damage": power * 2.6, "color": data.color, "impact": true})
-    else: projectiles.append({"position": player.position, "velocity": Vector2(cos(angle), sin(angle)) * 560.0, "life": 1.5, "radius": 8.0, "damage": power, "color": data.color, "kind": data.kind, "impact": false})
+    else:
+        play_sfx("ranged")
+        projectiles.append({"position": player.position, "velocity": Vector2(cos(angle), sin(angle)) * 560.0, "life": 1.5, "radius": 8.0, "damage": power, "color": data.color, "kind": data.kind, "impact": false})
 
 func weapon_power(id: String) -> float:
     var rank: int = int(weapon_ranks.get(id, 1))
@@ -328,10 +375,12 @@ func update_enemies(delta: float) -> void:
         if enemy.health <= 0.0:
             essence += enemy.essence
             run_kills += 1
+            play_sfx("defeat")
             enemy_bursts.append({"position": enemy.position, "color": MONSTERS[enemy.type].color, "radius": enemy.radius, "life": 0.32})
             enemies.erase(enemy)
             if enemy.type == "DREAD REGENT":
                 mode = "victory"
+                play_sfx("victory")
                 crown_coins += 50
                 run_coins_earned = 50
                 save_meta()
@@ -367,7 +416,7 @@ func choose_ascension(index: int) -> void:
 
 func damage_player(amount: float) -> void:
     if invulnerable > 0.0: return
-    invulnerable = 0.7; player_hit_flash = 0.2; player.health -= amount
+    invulnerable = 0.7; player_hit_flash = 0.2; player.health -= amount; play_sfx("damage")
     if player.health <= 0.0: die()
 
 func die() -> void:

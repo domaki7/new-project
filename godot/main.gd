@@ -426,8 +426,17 @@ func _draw() -> void:
         draw_circle(pickup.position, 34.0 + sin(elapsed * 4.0) * 5.0, Color(data.color, 0.15))
         var diamond := PackedVector2Array([pickup.position + Vector2(0, -22), pickup.position + Vector2(22, 0), pickup.position + Vector2(0, 22), pickup.position + Vector2(-22, 0)])
         draw_colored_polygon(diamond, Color("18253a")); draw_polyline(PackedVector2Array([diamond[0], diamond[1], diamond[2], diamond[3], diamond[0]]), data.color, 3.0)
-        draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-55, 42), pickup.name, HORIZONTAL_ALIGNMENT_CENTER, 110, 10, Color("edf2e9"))
-    for projectile in projectiles: draw_circle(projectile.position, projectile.radius, projectile.color)
+        draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-55, 42), pickup.name, HORIZONTAL_ALIGNMENT_CENTER, 110, 10, Color("edf2e9")); draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-55, 56), pickup.family, HORIZONTAL_ALIGNMENT_CENTER, 110, 8, data.color)
+    for projectile in projectiles:
+        if projectile.impact:
+            draw_circle(projectile.position, projectile.radius + 8.0, Color(projectile.color, .18)); draw_arc(projectile.position, projectile.radius, 0, TAU, 24, projectile.color, 4.0)
+        elif projectile.kind == "frost":
+            var shard := PackedVector2Array([projectile.position + Vector2(0, -14), projectile.position + Vector2(8, 0), projectile.position + Vector2(0, 14), projectile.position + Vector2(-8, 0)])
+            draw_colored_polygon(shard, projectile.color); draw_polyline(PackedVector2Array([shard[0], shard[1], shard[2], shard[3], shard[0]]), Color("ffffff"), 2.0)
+        elif projectile.kind == "venom":
+            draw_circle(projectile.position, projectile.radius + 5.0, Color(projectile.color, .18)); draw_circle(projectile.position, projectile.radius, projectile.color); draw_arc(projectile.position, projectile.radius, 0, TAU, 16, Color("d9ffb7"), 2.0)
+        else:
+            draw_line(projectile.position - projectile.velocity.normalized() * 14.0, projectile.position, projectile.color, 5.0); draw_circle(projectile.position, projectile.radius, projectile.color)
     for enemy in enemies:
         draw_monster(enemy, MONSTERS[enemy.type])
     if player:

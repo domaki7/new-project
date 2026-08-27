@@ -433,6 +433,10 @@ func draw_ellipse_custom(center: Vector2, radius: Vector2, color: Color) -> void
 
 func draw_knight() -> void:
     var position: Vector2 = player.position
+    var health_ratio: float = clamp(player.health / player.max_health, 0.0, 1.0)
+    var health_color := Color("63d1c2") if health_ratio > 0.35 else Color("ed725c")
+    draw_arc(position, 45.0, -PI * 0.5, -PI * 0.5 + TAU * health_ratio, 28, health_color, 3.0)
+    draw_arc(position, 45.0, -PI * 0.5 + TAU * health_ratio, PI * 1.5, 28, Color(0.08, 0.12, 0.16, 0.75), 3.0)
     if player_hit_flash > 0.0:
         var impact_fade: float = player_hit_flash / 0.2
         draw_circle(position, 48.0 - impact_fade * 12.0, Color(1.0, 0.42, 0.3, 0.12 * impact_fade))

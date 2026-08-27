@@ -370,7 +370,17 @@ func update_enemies(delta: float) -> void:
         var separation: float = -1.0 if enemy.type == "ORACLE" and enemy.position.distance_to(player.position) < 240.0 else 1.0
         enemy.slow = max(0.0, enemy.slow - delta); enemy.poison = max(0.0, enemy.poison - delta); enemy.hit_flash = max(0.0, enemy.hit_flash - delta)
         enemy.health -= 7.0 * delta if enemy.poison > 0.0 else 0.0
-        enemy.position += Vector2(cos(angle), sin(angle)) * enemy.speed * separation * (0.45 if enemy.slow > 0 else 1.0) * delta
+        var crowd_push := Vector2.ZERO
+        for other in enemies:
+            if other == enemy: continue
+            var offset: Vector2 = enemy.position - other.position
+            var crowd_distance: float = offset.length()
+            var crowd_radius: float = enemy.radius + other.radius + 8.0
+            if crowd_distance > 0.1 and crowd_distance < crowd_radius:
+                crowd_push += offset.normalized() * (crowd_radius - crowd_distance) / crowd_radius
+        var movement_direction := Vector2(cos(angle), sin(angle)) * separation
+        movement_direction = (movement_direction + crowd_push * 1.8).normalized()
+        enemy.position += movement_direction * enemy.speed * (0.45 if enemy.slow > 0 else 1.0) * delta
         if enemy.position.distance_to(player.position) < enemy.radius + 17.0: damage_player(enemy.damage * delta)
         if enemy.health <= 0.0:
             essence += enemy.essence

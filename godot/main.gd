@@ -234,7 +234,7 @@ func auto_cast(delta: float) -> void:
 
 func fire_weapon(id: String, target: Dictionary) -> void:
     var data: Dictionary = WEAPONS[id]; weapon_cooldowns[id] = data.cooldown
-    var power: float = 22.0 + meta_damage * 5.0
+    var power: float = weapon_power(id)
     var angle: float = player.position.angle_to_point(target.position)
     if data.kind == "blade":
         blade_angle = angle; blade_flash = 0.3
@@ -249,6 +249,11 @@ func fire_weapon(id: String, target: Dictionary) -> void:
             if enemy.position.distance_to(target.position) < 185.0: enemy.health -= power * 1.1
     elif data.kind == "meteor": projectiles.append({"position": target.position, "velocity": Vector2.ZERO, "life": 0.5, "radius": 48.0, "damage": power * 2.6, "color": data.color, "impact": true})
     else: projectiles.append({"position": player.position, "velocity": Vector2(cos(angle), sin(angle)) * 560.0, "life": 1.5, "radius": 8.0, "damage": power, "color": data.color, "kind": data.kind, "impact": false})
+
+func weapon_power(id: String) -> float:
+    var rank: int = int(weapon_ranks.get(id, 1))
+    var mastery: float = 1.18 if unlocked_nodes.has("ARSENAL MASTERY") else 1.0
+    return (22.0 + meta_damage * 5.0) * mastery * pow(float(rank), 0.35)
 
 func nearest_enemy() -> Dictionary:
     var nearest: Dictionary = enemies[0]

@@ -195,11 +195,21 @@ func collect_pickups() -> void:
                 if weapon_family.is_empty():
                     weapon_family = WEAPONS[id].family
                     load_path_nodes()
+                    for other_pickup in pickups.duplicate():
+                        if WEAPONS.has(other_pickup.name) and WEAPONS[other_pickup.name].family != weapon_family:
+                            pickups.erase(other_pickup)
+                if WEAPONS[id].family != weapon_family:
+                    pickups.erase(pickup)
+                    continue
                 unlocked_nodes[id] = true
                 save_path_nodes()
                 weapon_ranks[id] = int(weapon_ranks.get(id, 0)) + 1
                 if not equipped.has(id) and equipped.size() < MAX_WEAPONS: equipped.append(id); weapon_cooldowns[id] = 0.0
-            elif UPGRADES.has(id): unlocked_nodes[id] = true; save_path_nodes(); apply_upgrade(id)
+            elif UPGRADES.has(id):
+                if UPGRADES[id].family != weapon_family:
+                    pickups.erase(pickup)
+                    continue
+                unlocked_nodes[id] = true; save_path_nodes(); apply_upgrade(id)
             status = "%s CLAIMED / %s PATH" % [id, weapon_family]
             pickups.erase(pickup)
     pickups = pickups.filter(func(item: Dictionary) -> bool: return item.life > 0.0)
@@ -279,7 +289,7 @@ func open_ascension() -> void:
     ascension_options.clear()
     var candidates: Array[String] = []
     for id in WEAPONS:
-        if WEAPONS[id].family == weapon_family and not unlocked_nodes.has(id): candidates.append(id)
+        if WEAPONS[id].family == weapon_family and not unlocked_nodes.has(id) and equipped.size() < MAX_WEAPONS: candidates.append(id)
     for id in UPGRADES:
         if UPGRADES[id].family == weapon_family and not unlocked_nodes.has(id): candidates.append(id)
     candidates.shuffle()

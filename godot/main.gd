@@ -59,16 +59,48 @@ var meta_range := 0
 var meta_file := "user://crown_meta.cfg"
 var ascension_options: Array[String] = []
 var ascension_positions := [Vector2(390, 385), Vector2(640, 385), Vector2(890, 385)]
+var hud_labels: Dictionary = {}
 
 func _ready() -> void:
     load_meta()
+    setup_hud()
     queue_redraw()
 
 func _process(delta: float) -> void:
     if mode == "play": update_game(delta)
     blade_flash = max(0.0, blade_flash - delta)
     invulnerable = max(0.0, invulnerable - delta)
+    update_hud()
     queue_redraw()
+
+func setup_hud() -> void:
+    var layer := CanvasLayer.new()
+    add_child(layer)
+    var panel := ColorRect.new()
+    panel.color = Color(0.03, 0.06, 0.12, 0.88)
+    panel.position = Vector2(24, 20)
+    panel.size = Vector2(1232, 72)
+    layer.add_child(panel)
+    hud_labels["title"] = make_label(layer, Vector2(44, 31), "CROWN OF THE ABSOLUTE", 24, Color("f2f0d0"))
+    hud_labels["stats"] = make_label(layer, Vector2(650, 32), "", 14, Color("edc968"))
+    hud_labels["status"] = make_label(layer, Vector2(44, 122), "", 13, Color("63d1c2"))
+    hud_labels["build"] = make_label(layer, Vector2(44, 675), "", 13, Color("aebbb2"))
+    hud_labels["help"] = make_label(layer, Vector2(930, 675), "WASD / ARROWS  ·  R RESTART", 12, Color("879b9b"))
+
+func make_label(parent: Node, position: Vector2, text: String, size: int, color: Color) -> Label:
+    var label := Label.new()
+    label.position = position
+    label.text = text
+    label.add_theme_font_size_override("font_size", size)
+    label.add_theme_color_override("font_color", color)
+    parent.add_child(label)
+    return label
+
+func update_hud() -> void:
+    if hud_labels.is_empty(): return
+    hud_labels["stats"].text = "VESSEL %02d     ESSENCE %03d     WAVE %02d / 05     VITALITY %03d" % [level, essence, wave, max(0, int(player.health))]
+    hud_labels["status"].text = status
+    hud_labels["build"].text = "PATH: %s     ACTIVE WEAPONS: %s / %d     %s" % [weapon_family if not weapon_family.is_empty() else "UNARMED", ", ".join(equipped) if not equipped.is_empty() else "NONE", MAX_WEAPONS, "CROWN COINS: %d" % crown_coins]
 
 func load_meta() -> void:
     var config := ConfigFile.new()
@@ -106,6 +138,7 @@ func start_game() -> void:
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
     pickups.append({"position": player.position + Vector2(-100, 0), "name": "STAR BOLT", "family": "RANGED", "life": 40.0})
     status = "CHOOSE YOUR FIRST PATH"
+    update_hud()
 
 func update_game(delta: float) -> void:
     var movement := Vector2.ZERO

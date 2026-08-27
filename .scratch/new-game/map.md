@@ -39,6 +39,7 @@
 - Replace random ascension cards with a connected family-specific unlock web and selectable frontier nodes.
 - Enforce the five-weapon cap at both web display and unlock time; leave passive upgrades available.
 - Persist melee and ranged web unlocks independently across runs while resetting the current loadout.
+- Make Godot the active implementation with parity across combat, progression, meta upgrades, restart, fullscreen, visuals, and HUD.
 - Render framed floor pickup cards with full names and MELEE, RANGED, or UPGRADE labels.
 - Make nearby relic cards brighter and larger while keeping distant drops visually restrained.
 - Award persistent Crown Coins on death for permanent starting power, vitality, and pickup-range upgrades.

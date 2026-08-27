@@ -53,6 +53,7 @@ var elapsed := 0.0
 var invulnerable := 0.0
 var blade_angle := 0.0
 var blade_flash := 0.0
+var player_hit_flash := 0.0
 var mode := "start"
 var status := "UNARMED - COLLECT YOUR FIRST RELIC"
 var crown_coins := 0
@@ -75,6 +76,7 @@ func _process(delta: float) -> void:
     elapsed += delta
     if mode == "play": update_game(delta)
     blade_flash = max(0.0, blade_flash - delta)
+    player_hit_flash = max(0.0, player_hit_flash - delta)
     for id in weapon_swings.keys(): weapon_swings[id] = max(0.0, float(weapon_swings[id]) - delta)
     for impact in melee_impacts: impact.life = max(0.0, float(impact.life) - delta)
     melee_impacts = melee_impacts.filter(func(impact: Dictionary) -> bool: return impact.life > 0.0)
@@ -141,7 +143,7 @@ func save_path_nodes() -> void:
 
 func start_game() -> void:
     mode = "play"
-    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
+    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
@@ -358,7 +360,7 @@ func choose_ascension(index: int) -> void:
 
 func damage_player(amount: float) -> void:
     if invulnerable > 0.0: return
-    invulnerable = 0.7; player.health -= amount
+    invulnerable = 0.7; player_hit_flash = 0.2; player.health -= amount
     if player.health <= 0.0: die()
 
 func die() -> void:
@@ -425,12 +427,17 @@ func draw_ellipse_custom(center: Vector2, radius: Vector2, color: Color) -> void
 
 func draw_knight() -> void:
     var position: Vector2 = player.position
+    if player_hit_flash > 0.0:
+        var impact_fade: float = player_hit_flash / 0.2
+        draw_circle(position, 48.0 - impact_fade * 12.0, Color(1.0, 0.42, 0.3, 0.12 * impact_fade))
+        draw_arc(position, 36.0 + (1.0 - impact_fade) * 20.0, 0, TAU, 20, Color(1.0, 0.75, 0.5, impact_fade), 3.0)
     draw_ellipse_custom(position + Vector2(0, 27), Vector2(32, 10), Color(0, 0, 0, .48))
     draw_line(position + Vector2(-17, 5), position + Vector2(-31, 28), Color("aebbb2"), 8.0); draw_line(position + Vector2(17, 5), position + Vector2(31, 28), Color("aebbb2"), 8.0)
     draw_line(position + Vector2(-11, 16), position + Vector2(-14, 42), Color("53656a"), 10.0); draw_line(position + Vector2(11, 16), position + Vector2(14, 42), Color("53656a"), 10.0)
     draw_circle(position + Vector2(-31, 28), 7.0, Color("edc968")); draw_circle(position + Vector2(31, 28), 7.0, Color("edc968"))
     var armor := PackedVector2Array([position + Vector2(-20, -4), position + Vector2(-14, -25), position + Vector2(0, -38), position + Vector2(14, -25), position + Vector2(20, -4), position + Vector2(16, 22), position + Vector2(-16, 22)])
-    draw_colored_polygon(armor, Color("aebbb2")); draw_polyline(PackedVector2Array([armor[0], armor[1], armor[2], armor[3], armor[4], armor[5], armor[6], armor[0]]), Color("edc968"), 3.0)
+    var armor_color := Color("ffffff") if player_hit_flash > 0.0 else Color("aebbb2")
+    draw_colored_polygon(armor, armor_color); draw_polyline(PackedVector2Array([armor[0], armor[1], armor[2], armor[3], armor[4], armor[5], armor[6], armor[0]]), Color("edc968"), 3.0)
     draw_colored_polygon(PackedVector2Array([position + Vector2(-13, -22), position + Vector2(0, -34), position + Vector2(10, -23), position + Vector2(5, -5), position + Vector2(-10, -5)]), Color("dbe6df"))
     draw_line(position + Vector2(-8, -7), position + Vector2(8, -7), Color("607b80"), 2.0)
     draw_line(position + Vector2(-16, -5), position + Vector2(16, -5), Color("263744"), 7.0)

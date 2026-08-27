@@ -442,11 +442,16 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
         draw_circle(position, radius * 0.5, Color("101826"))
         draw_arc(position, radius * 0.52, elapsed * 0.9, elapsed * 0.9 + PI, 12, data.color, 2.0)
     var enemy_color: Color = Color("ffffff") if enemy.hit_flash > 0.0 else data.color
+    var gaze: Vector2 = (player.position - position).normalized()
+    var gaze_side: Vector2 = Vector2(-gaze.y, gaze.x)
+    var breathe: float = sin(elapsed * 3.0 + position.x * 0.01) * radius * 0.04
+    var eye_center: Vector2 = position + gaze * (radius * 0.24 + breathe)
+    draw_circle(eye_center - gaze_side * radius * 0.18, 3.0, enemy_color)
+    draw_circle(eye_center + gaze_side * radius * 0.18, 3.0, enemy_color)
     draw_circle(position + Vector2(-radius * 0.3, radius * 0.45), radius * 0.16, Color(enemy_color, 0.18))
     if enemy.hit_flash > 0.0:
         draw_arc(position, radius + 5.0, 0, TAU, 20, Color(1.0, 0.9, 0.65, enemy.hit_flash / 0.14), 3.0)
     draw_circle(position - Vector2(radius * .25, radius * .28), radius * .25, Color(enemy_color, 0.16))
-    draw_circle(position + Vector2(radius * .25, -radius * .18), 3.0, data.color); draw_circle(position + Vector2(radius * .25, radius * .18), 3.0, data.color)
     var health_ratio: float = max(0.0, enemy.health / enemy.max_health)
     var meter := Rect2(position + Vector2(-radius, -radius - 14), Vector2(radius * 2.0, 6.0))
     draw_rect(meter, Color(0.02, 0.04, 0.07, 0.9))

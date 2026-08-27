@@ -497,6 +497,8 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
     var eye_center: Vector2 = position + gaze * (radius * 0.24 + breathe)
     draw_circle(eye_center - gaze_side * radius * 0.18, 3.0, enemy_color)
     draw_circle(eye_center + gaze_side * radius * 0.18, 3.0, enemy_color)
+    draw_circle(eye_center - gaze_side * radius * 0.18 + gaze * 1.4, 1.2, Color("101826"))
+    draw_circle(eye_center + gaze_side * radius * 0.18 + gaze * 1.4, 1.2, Color("101826"))
     draw_circle(position + Vector2(-radius * 0.3, radius * 0.45), radius * 0.16, Color(enemy_color, 0.18))
     if enemy.slow > 0.0:
         draw_arc(position, radius + 8.0, elapsed * 1.8, elapsed * 1.8 + PI * 1.3, 16, Color(0.62, 0.84, 1.0, 0.6), 2.0)
@@ -637,6 +639,7 @@ func draw_equipped_weapon(id: String, index: int, total: int) -> void:
         draw_melee_swing(style, player.position, angle, float(data.get("reach", 90.0)), data.color, swing_remaining / max(0.01, swing_time))
         return
     var anchor: Vector2 = player.position + Vector2(cos(angle), sin(angle)) * radius
+    draw_circle(anchor, 17.0 + sin(elapsed * 4.0 + index) * 2.0, Color(data.color, 0.07))
     if data.family == "MELEE":
         var idle_reach: float = float(data.get("reach", 90.0)) * 0.4
         if style == "blade":
@@ -644,18 +647,21 @@ func draw_equipped_weapon(id: String, index: int, total: int) -> void:
         elif style == "nova":
             draw_arc(anchor, idle_reach * 0.45, 0, TAU, 16, data.color, 3.0)
             draw_circle(anchor, 5.0, data.color)
+            draw_circle(anchor - Vector2(2.0, 2.0), 2.0, Color("d9ffef"))
         elif style == "chain":
             draw_line(anchor, anchor + Vector2(cos(angle), sin(angle)) * idle_reach, data.color, 4.0)
             draw_circle(anchor + Vector2(cos(angle), sin(angle)) * idle_reach * 0.65, 5.0, Color("f2f0d0"))
         return
     if id == "STAR BOLT":
         draw_colored_polygon(PackedVector2Array([anchor + Vector2(0, -12), anchor + Vector2(7, 0), anchor + Vector2(0, 12), anchor + Vector2(-7, 0)]), data.color)
+        draw_circle(anchor - Vector2(2.0, 2.0), 2.0, Color("fff8cf"))
     elif id == "GRAVITY NOVA":
         draw_arc(anchor, 12.0, 0, TAU, 16, data.color, 3.0); draw_circle(anchor, 4.0, data.color)
     elif id == "SOUL CHAIN":
         draw_arc(anchor + Vector2(0, -7), 7.0, 0, TAU, 12, data.color, 3.0); draw_arc(anchor + Vector2(0, 8), 7.0, 0, TAU, 12, data.color, 3.0)
     elif id == "ROYAL METEOR":
         draw_colored_polygon(PackedVector2Array([anchor + Vector2(0, -15), anchor + Vector2(9, 5), anchor + Vector2(0, 13), anchor + Vector2(-9, 5)]), data.color)
+        draw_line(anchor - Vector2(7, 10), anchor + Vector2(7, 10), Color("fff1c2"), 2.0)
     elif id == "FROST LANCE":
         draw_colored_polygon(PackedVector2Array([anchor + Vector2(0, -16), anchor + Vector2(8, 0), anchor + Vector2(0, 16), anchor + Vector2(-8, 0)]), data.color)
     elif id == "VENOM ORB":

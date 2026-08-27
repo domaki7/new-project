@@ -332,7 +332,7 @@ func fire_weapon(id: String, target: Dictionary) -> void:
                 enemy.hit_flash = 0.14
                 var recoil: float = 10.0 if data.kind == "blade" else 18.0 if data.kind == "nova" else 7.0
                 enemy.position += relative.normalized() * recoil
-                melee_impacts.append({"position": enemy.position, "style": data.style, "color": data.color, "life": 0.22})
+                melee_impacts.append({"position": enemy.position, "style": data.style, "color": data.color, "life": 0.22, "angle": angle})
     elif data.kind == "storm":
         for enemy in enemies:
             if enemy.position.distance_to(target.position) < 185.0: enemy.health -= power * 1.1
@@ -621,6 +621,9 @@ func draw_melee_impact(impact: Dictionary) -> void:
     elif impact.style == "chain":
         draw_circle(position, 6.0 + progress * 7.0, Color("f2f0d0"))
         draw_arc(position, 12.0 + progress * 14.0, 0, TAU, 12, Color(color.r, color.g, color.b, fade), 3.0)
+    var impact_angle: float = float(impact.get("angle", 0.0))
+    var impact_direction := Vector2(cos(impact_angle), sin(impact_angle))
+    draw_line(position - impact_direction * 7.0, position + impact_direction * (14.0 + progress * 10.0), Color(1.0, 0.95, 0.72, fade * 0.65), 2.0)
 
 func draw_enemy_burst(burst: Dictionary) -> void:
     var progress: float = 1.0 - float(burst.life) / 0.32

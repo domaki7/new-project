@@ -415,6 +415,8 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
         var wisp := PackedVector2Array([position + Vector2(0, -radius - 5), position + Vector2(radius, 0), position + Vector2(0, radius + 5), position + Vector2(-radius, 0)])
         draw_colored_polygon(wisp, Color("101826")); draw_polyline(PackedVector2Array([wisp[0], wisp[1], wisp[2], wisp[3], wisp[0]]), data.color, 3.0)
     var enemy_color: Color = Color("ffffff") if enemy.hit_flash > 0.0 else data.color
+    if enemy.hit_flash > 0.0:
+        draw_arc(position, radius + 5.0, 0, TAU, 20, Color(1.0, 0.9, 0.65, enemy.hit_flash / 0.14), 3.0)
     draw_circle(position - Vector2(radius * .25, radius * .28), radius * .25, Color(enemy_color, 0.16))
     draw_circle(position + Vector2(radius * .25, -radius * .18), 3.0, data.color); draw_circle(position + Vector2(radius * .25, radius * .18), 3.0, data.color)
     var health_ratio: float = max(0.0, enemy.health / enemy.max_health)

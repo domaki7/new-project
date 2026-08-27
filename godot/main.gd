@@ -421,6 +421,24 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
     else:
         var wisp := PackedVector2Array([position + Vector2(0, -radius - 5), position + Vector2(radius, 0), position + Vector2(0, radius + 5), position + Vector2(-radius, 0)])
         draw_colored_polygon(wisp, Color("101826")); draw_polyline(PackedVector2Array([wisp[0], wisp[1], wisp[2], wisp[3], wisp[0]]), data.color, 3.0)
+    if enemy.type == "WISP":
+        draw_circle(position, radius * 0.42, Color(data.color, 0.28))
+        draw_circle(position, radius * 0.16, Color("f2f0d0"))
+    elif enemy.type == "BRUTE":
+        draw_line(position + Vector2(-radius * 0.58, 0), position + Vector2(-radius * 0.25, radius * 0.55), Color("53656a"), 3.0)
+        draw_line(position + Vector2(radius * 0.58, 0), position + Vector2(radius * 0.25, radius * 0.55), Color("53656a"), 3.0)
+    elif enemy.type == "CHARGER":
+        draw_line(position + Vector2(radius * 0.1, -radius * 0.35), position + Vector2(radius * 0.55, -radius * 0.1), Color("f2f0d0"), 2.0)
+        draw_circle(position + Vector2(radius * 0.38, -radius * 0.08), 2.5, Color("ed725c"))
+    elif enemy.type == "SPLITTER":
+        draw_line(position + Vector2(-radius * 0.65, -radius * 0.3), position + Vector2(-radius * 0.2, radius * 0.15), data.color, 2.0)
+        draw_line(position + Vector2(radius * 0.1, radius * 0.4), position + Vector2(radius * 0.55, radius * 0.05), data.color, 2.0)
+    elif enemy.type == "LEECH":
+        draw_line(position + Vector2(radius * 0.55, -radius * 0.22), position + Vector2(radius * 0.9, 0), data.color, 2.0)
+        draw_line(position + Vector2(radius * 0.55, radius * 0.22), position + Vector2(radius * 0.9, 0), data.color, 2.0)
+    elif enemy.type == "ORACLE":
+        draw_circle(position, radius * 0.5, Color("101826"))
+        draw_arc(position, radius * 0.52, elapsed * 0.9, elapsed * 0.9 + PI, 12, data.color, 2.0)
     var enemy_color: Color = Color("ffffff") if enemy.hit_flash > 0.0 else data.color
     if enemy.hit_flash > 0.0:
         draw_arc(position, radius + 5.0, 0, TAU, 20, Color(1.0, 0.9, 0.65, enemy.hit_flash / 0.14), 3.0)

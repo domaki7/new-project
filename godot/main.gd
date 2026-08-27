@@ -680,6 +680,11 @@ func _draw() -> void:
         var stone_angle := TAU * float(stone) / 34.0
         var stone_position := ARENA_SIZE * 0.5 + Vector2(cos(stone_angle), sin(stone_angle)) * (220.0 + float(stone % 3) * 34.0)
         draw_circle(stone_position, 2.0 + float(stone % 2), Color(0.45, 0.52, 0.52, 0.13))
+    for mote in range(24):
+        var mote_seed: float = float(mote) * 37.0
+        var mote_position := Vector2(fmod(mote_seed * 31.0 + elapsed * (5.0 + float(mote % 3)), ARENA_SIZE.x), fmod(mote_seed * 17.0 + elapsed * (3.0 + float(mote % 4)), ARENA_SIZE.y))
+        var mote_alpha: float = 0.05 + sin(elapsed * 2.0 + mote_seed) * 0.025
+        draw_circle(mote_position, 1.0 + float(mote % 2), Color(0.75, 0.84, 0.8, mote_alpha))
     draw_polyline(PackedVector2Array([Vector2(26, 26), Vector2(ARENA_SIZE.x - 26, 26), Vector2(ARENA_SIZE.x - 26, ARENA_SIZE.y - 26), Vector2(26, ARENA_SIZE.y - 26), Vector2(26, 26)]), Color(0.93, .79, .4, .22), 2.0)
     for pickup in pickups:
         var data: Dictionary = WEAPONS[pickup.name] if WEAPONS.has(pickup.name) else UPGRADES[pickup.name]

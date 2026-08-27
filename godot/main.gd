@@ -3,9 +3,9 @@ extends Node2D
 const ARENA_SIZE := Vector2(1280, 720)
 const MAX_WEAPONS := 5
 const WEAPONS := {
-    "VOID BLADE": {"family": "MELEE", "color": Color("ed725c"), "cooldown": 0.8, "kind": "blade"},
-    "GRAVITY NOVA": {"family": "MELEE", "color": Color("63d1c2"), "cooldown": 1.5, "kind": "nova"},
-    "SOUL CHAIN": {"family": "MELEE", "color": Color("a98cff"), "cooldown": 1.1, "kind": "chain"},
+    "VOID BLADE": {"family": "MELEE", "color": Color("ed725c"), "cooldown": 0.8, "kind": "blade", "style": "blade", "damage_mult": 1.5, "reach": 100.0, "swing_arc": 1.15, "swing_time": 0.28, "strength": "FAST / PRECISION", "weakness": "SHORT REACH"},
+    "GRAVITY NOVA": {"family": "MELEE", "color": Color("63d1c2"), "cooldown": 1.5, "kind": "nova", "style": "nova", "damage_mult": 2.2, "reach": 126.0, "swing_arc": 1.8, "swing_time": 0.42, "strength": "HEAVY / WIDE", "weakness": "SLOW STARTUP"},
+    "SOUL CHAIN": {"family": "MELEE", "color": Color("a98cff"), "cooldown": 1.1, "kind": "chain", "style": "chain", "damage_mult": 1.3, "reach": 148.0, "swing_arc": 2.1, "swing_time": 0.32, "strength": "LONG / POISON", "weakness": "LOWER BURST"},
     "STAR BOLT": {"family": "RANGED", "color": Color("edc968"), "cooldown": 0.32, "kind": "bolt"},
     "ROYAL METEOR": {"family": "RANGED", "color": Color("ff9b52"), "cooldown": 2.2, "kind": "meteor"},
     "FROST LANCE": {"family": "RANGED", "color": Color("9fd6ff"), "cooldown": 0.65, "kind": "frost"},
@@ -39,11 +39,14 @@ var pickups: Array[Dictionary] = []
 var equipped: Array[String] = []
 var weapon_ranks := {}
 var weapon_cooldowns := {}
+var weapon_swings := {}
+var melee_impacts: Array[Dictionary] = []
 var unlocked_nodes := {}
 var weapon_family := ""
 var level := 1
 var essence := 0
 var wave := 1
+var boss_spawned := false
 var spawn_timer := 0.0
 var pickup_timer := 0.0
 var elapsed := 0.0
@@ -53,6 +56,8 @@ var blade_flash := 0.0
 var mode := "start"
 var status := "UNARMED - COLLECT YOUR FIRST RELIC"
 var crown_coins := 0
+var run_kills := 0
+var run_coins_earned := 0
 var meta_damage := 0
 var meta_health := 0
 var meta_range := 0
@@ -67,8 +72,12 @@ func _ready() -> void:
     queue_redraw()
 
 func _process(delta: float) -> void:
+    elapsed += delta
     if mode == "play": update_game(delta)
     blade_flash = max(0.0, blade_flash - delta)
+    for id in weapon_swings.keys(): weapon_swings[id] = max(0.0, float(weapon_swings[id]) - delta)
+    for impact in melee_impacts: impact.life = max(0.0, float(impact.life) - delta)
+    melee_impacts = melee_impacts.filter(func(impact: Dictionary) -> bool: return impact.life > 0.0)
     invulnerable = max(0.0, invulnerable - delta)
     update_hud()
     queue_redraw()
@@ -132,7 +141,7 @@ func save_path_nodes() -> void:
 
 func start_game() -> void:
     mode = "play"
-    level = 1; essence = 0; wave = 1; equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
+    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
@@ -155,7 +164,11 @@ func update_game(delta: float) -> void:
     if pickup_timer <= 0.0 and not weapon_family.is_empty() and pickups.size() < 5:
         spawn_pickup(); pickup_timer = 4.0
     collect_pickups(); auto_cast(delta); update_projectiles(delta); update_enemies(delta)
-    if enemies.size() > 12 + wave * 3: wave = min(5, wave + 1)
+    if enemies.size() > 12 + wave * 3:
+        var previous_wave: int = wave
+        wave = min(5, wave + 1)
+        if wave > previous_wave:
+            status = "WAVE %02d REACHED - THREATS ESCALATING" % wave
     player.health = min(player.max_health, player.health + float(meta_health) * 0.02 * delta)
 
 func spawn_enemy() -> void:
@@ -166,7 +179,10 @@ func spawn_enemy() -> void:
     elif side == 2: position = Vector2(randf_range(0, ARENA_SIZE.x), -35)
     else: position = Vector2(randf_range(0, ARENA_SIZE.x), ARENA_SIZE.y + 35)
     var roll := randf(); var type := "WISP"
-    if wave >= 5 and roll < 0.08: type = "DREAD REGENT"
+    if wave >= 5 and not boss_spawned:
+        type = "DREAD REGENT"
+        boss_spawned = true
+        status = "THE DREAD REGENT HAS ENTERED THE ARENA"
     elif roll < 0.2: type = "BRUTE"
     elif roll < 0.36: type = "CHARGER"
     elif roll < 0.5: type = "SPLITTER"
@@ -236,14 +252,30 @@ func fire_weapon(id: String, target: Dictionary) -> void:
     var data: Dictionary = WEAPONS[id]; weapon_cooldowns[id] = data.cooldown
     var power: float = weapon_power(id)
     var angle: float = player.position.angle_to_point(target.position)
-    if data.kind == "blade":
-        blade_angle = angle; blade_flash = 0.3
+    if data.kind in ["blade", "nova", "chain"]:
+        weapon_swings[id] = float(data.get("swing_time", 0.3))
+        weapon_swings[id + "_angle"] = angle
+        blade_angle = angle
+        blade_flash = max(blade_flash, float(data.get("swing_time", 0.3)))
+        var reach: float = float(data.get("reach", 110.0))
+        var arc: float = float(data.get("swing_arc", 1.2))
+        var damage_mult: float = float(data.get("damage_mult", 1.0))
         for enemy in enemies:
-            if enemy.position.distance_to(player.position) < 115.0: enemy.health -= power * 1.5
-    elif data.kind == "nova":
-        for enemy in enemies:
-            if enemy.position.distance_to(player.position) < 150.0: enemy.health -= power * 1.25
-    elif data.kind == "chain": target.health -= power * 1.2
+            var relative: Vector2 = enemy.position - player.position
+            var dist: float = relative.length()
+            var relative_angle: float = abs(wrapf(relative.angle() - angle, -PI, PI))
+            if dist <= reach and relative_angle <= arc * 0.5:
+                var hit: float = power * damage_mult
+                if data.kind == "blade":
+                    hit *= 1.25 if dist < reach * 0.6 else 0.95
+                elif data.kind == "nova":
+                    hit *= 1.4 if dist < reach * 0.75 else 0.85
+                    enemy.slow = max(enemy.slow, 0.7)
+                elif data.kind == "chain":
+                    hit *= 1.25 if dist > reach * 0.7 else 0.9
+                    enemy.poison = max(enemy.poison, 1.0)
+                enemy.health -= hit
+                melee_impacts.append({"position": enemy.position, "style": data.style, "color": data.color, "life": 0.22})
     elif data.kind == "storm":
         for enemy in enemies:
             if enemy.position.distance_to(target.position) < 185.0: enemy.health -= power * 1.1
@@ -285,7 +317,16 @@ func update_enemies(delta: float) -> void:
         enemy.health -= 7.0 * delta if enemy.poison > 0.0 else 0.0
         enemy.position += Vector2(cos(angle), sin(angle)) * enemy.speed * separation * (0.45 if enemy.slow > 0 else 1.0) * delta
         if enemy.position.distance_to(player.position) < enemy.radius + 17.0: damage_player(enemy.damage * delta)
-        if enemy.health <= 0.0: essence += enemy.essence; enemies.erase(enemy)
+        if enemy.health <= 0.0:
+            essence += enemy.essence
+            run_kills += 1
+            enemies.erase(enemy)
+            if enemy.type == "DREAD REGENT":
+                mode = "victory"
+                crown_coins += 50
+                run_coins_earned = 50
+                save_meta()
+                status = "THE DREAD REGENT FALLS - 50 BONUS CROWN COINS"
 
         if essence >= 240 and mode == "play": open_ascension()
 
@@ -321,7 +362,11 @@ func damage_player(amount: float) -> void:
     if player.health <= 0.0: die()
 
 func die() -> void:
-    mode = "death"; crown_coins += max(5, essence / 12 + level * 3); save_meta(); status = "VESSEL LOST - %d CROWN COINS" % crown_coins
+    mode = "death"
+    run_coins_earned = max(5, essence / 12 + level * 3)
+    crown_coins += run_coins_earned
+    save_meta()
+    status = "VESSEL LOST - %d CROWN COINS" % crown_coins
 
 func _input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and event.keycode == KEY_R: start_game()
@@ -386,25 +431,95 @@ func draw_knight() -> void:
     draw_line(position + Vector2(38, 20), position + Vector2(51, 39), Color("dbe6df"), 5.0)
     draw_circle(position + Vector2(-6, -17), 3.0, Color("edc968")); draw_circle(position + Vector2(6, -17), 3.0, Color("edc968"))
 
+func draw_melee_swing(style: String, origin: Vector2, angle: float, reach: float, color: Color, intensity: float = 1.0) -> void:
+    var trail_end := origin + Vector2(cos(angle), sin(angle)) * reach
+    if style == "blade":
+        draw_sword(origin, angle, reach, color, true)
+        draw_arc(origin, reach * 0.7, angle - 0.9, angle + 0.9, 14, Color(color.r, color.g, color.b, 0.28 + intensity * 0.25), 4.0)
+    elif style == "nova":
+        draw_arc(origin, reach * 0.96, angle - 1.5, angle + 1.5, 22, Color(color.r, color.g, color.b, 0.2 + intensity * 0.35), 5.0)
+        draw_line(origin, origin + Vector2(cos(angle - 1.1), sin(angle - 1.1)) * reach, color, 6.0)
+        draw_line(origin, origin + Vector2(cos(angle + 1.1), sin(angle + 1.1)) * reach, color, 6.0)
+        draw_circle(origin + Vector2(cos(angle), sin(angle)) * reach * 0.7, 9.0, Color(color.r, color.g, color.b, 0.36))
+    elif style == "chain":
+        draw_line(origin, trail_end, color, 4.0)
+        for step in range(1, 5):
+            var point := origin.lerp(trail_end, float(step) / 5.0)
+            draw_circle(point, 4.0 + float(step) * 1.4, Color("f2f0d0"))
+        draw_arc(origin, reach * 0.8, angle - 2.1, angle + 2.1, 18, Color(color.r, color.g, color.b, 0.18 + intensity * 0.22), 3.0)
+
+func draw_sword(origin: Vector2, angle: float, length: float, color: Color, swung: bool = false) -> void:
+    var direction := Vector2(cos(angle), sin(angle))
+    var side := Vector2(-sin(angle), cos(angle))
+    var grip_start := origin - direction * 16.0
+    var guard_center := origin - direction * 5.0
+    var blade_start := guard_center + direction * 4.0
+    var tip := origin + direction * length
+    var blade_width := 7.0 if swung else 5.0
+    var blade := PackedVector2Array([
+        blade_start + side * blade_width,
+        tip - direction * 8.0 + side * 2.0,
+        tip,
+        tip - direction * 8.0 - side * 2.0,
+        blade_start - side * blade_width
+    ])
+    draw_colored_polygon(blade, Color("dbe6df"))
+    draw_polyline(PackedVector2Array([blade[0], blade[1], blade[2], blade[3], blade[4], blade[0]]), Color("53656a"), 2.0)
+    var fuller_start := blade_start + direction * 5.0 + side * 1.5
+    var fuller_end := tip - direction * 13.0 + side * 0.7
+    draw_line(fuller_start, fuller_end, Color("8b9da0"), 2.0)
+    draw_line(blade_start + side * 1.0, tip - direction * 10.0 + side * 0.5, Color("ffffff"), 1.5)
+    draw_line(guard_center - side * 13.0, guard_center + side * 13.0, color, 5.0)
+    draw_line(grip_start, guard_center - direction * 2.0, Color("3a2528"), 7.0)
+    draw_line(grip_start, guard_center - direction * 2.0, Color("8b5550"), 2.0)
+    for band in range(3):
+        var band_center := grip_start + direction * (5.0 + band * 6.0)
+        draw_line(band_center - side * 3.0, band_center + side * 3.0, Color("c27a68"), 1.5)
+    draw_circle(grip_start - direction * 3.0, 5.0, color)
+
+func draw_melee_impact(impact: Dictionary) -> void:
+    var position: Vector2 = impact.position
+    var color: Color = impact.color
+    var progress: float = 1.0 - float(impact.life) / 0.22
+    var fade: float = float(impact.life) / 0.22
+    if impact.style == "blade":
+        draw_line(position + Vector2(-10, -10) * (1.0 + progress), position + Vector2(10, 10) * (1.0 + progress), Color(1.0, 0.94, 0.65, fade), 3.0)
+        draw_line(position + Vector2(10, -10) * (1.0 + progress), position + Vector2(-10, 10) * (1.0 + progress), color * Color(1, 1, 1, fade), 2.0)
+    elif impact.style == "nova":
+        draw_circle(position, 16.0 + progress * 18.0, Color(color.r, color.g, color.b, 0.12 * fade))
+        draw_arc(position, 12.0 + progress * 20.0, 0, TAU, 16, Color(color.r, color.g, color.b, fade), 3.0)
+    elif impact.style == "chain":
+        draw_circle(position, 6.0 + progress * 7.0, Color("f2f0d0"))
+        draw_arc(position, 12.0 + progress * 14.0, 0, TAU, 12, Color(color.r, color.g, color.b, fade), 3.0)
+
 func draw_equipped_weapon(id: String, index: int, total: int) -> void:
     var data: Dictionary = WEAPONS[id]
     var orbit_angle: float = TAU * float(index) / float(max(1, total)) - PI / 2.0
     var angle: float = orbit_angle
     var radius: float = 45.0
-    if id == "VOID BLADE" and blade_flash > 0.0:
-        var progress: float = 1.0 - blade_flash / 0.3
-        angle = blade_angle - 1.15 + progress * 2.3
+    var style: String = data.get("style", "blade")
+    var swing_remaining: float = float(weapon_swings.get(id, 0.0))
+    if data.family == "MELEE" and swing_remaining > 0.0:
+        var swing_time: float = float(data.get("swing_time", 0.3))
+        var progress: float = 1.0 - swing_remaining / max(0.01, swing_time)
+        var attack_angle: float = float(weapon_swings.get(id + "_angle", blade_angle))
+        angle = attack_angle - float(data.get("swing_arc", 1.2)) * 0.5 + progress * float(data.get("swing_arc", 1.2))
         radius = 18.0
+        draw_melee_swing(style, player.position, angle, float(data.get("reach", 90.0)), data.color, swing_remaining / max(0.01, swing_time))
+        return
     var anchor: Vector2 = player.position + Vector2(cos(angle), sin(angle)) * radius
-    if id == "VOID BLADE" and blade_flash > 0.0:
-        var tip: Vector2 = player.position + Vector2(cos(angle), sin(angle)) * 88.0
-        draw_line(anchor, tip, Color("dbe6df"), 10.0); draw_line(anchor, tip, Color("ffffff"), 2.0)
-        draw_line(anchor + Vector2(-sin(angle), cos(angle)) * 12.0, anchor + Vector2(sin(angle), -cos(angle)) * 12.0, data.color, 5.0)
-        draw_arc(player.position, 78.0, angle - .7, angle + .7, 20, Color(1.0, .94, .55, blade_flash / .3), 4.0)
-    elif id == "VOID BLADE":
-        draw_line(anchor - Vector2(cos(angle), sin(angle)) * 17.0, anchor + Vector2(cos(angle), sin(angle)) * 17.0, Color("dbe6df"), 7.0)
-        draw_line(anchor + Vector2(-sin(angle), cos(angle)) * 10.0, anchor + Vector2(sin(angle), -cos(angle)) * 10.0, data.color, 4.0)
-    elif id == "STAR BOLT":
+    if data.family == "MELEE":
+        var idle_reach: float = float(data.get("reach", 90.0)) * 0.4
+        if style == "blade":
+            draw_sword(anchor, angle, idle_reach, data.color)
+        elif style == "nova":
+            draw_arc(anchor, idle_reach * 0.45, 0, TAU, 16, data.color, 3.0)
+            draw_circle(anchor, 5.0, data.color)
+        elif style == "chain":
+            draw_line(anchor, anchor + Vector2(cos(angle), sin(angle)) * idle_reach, data.color, 4.0)
+            draw_circle(anchor + Vector2(cos(angle), sin(angle)) * idle_reach * 0.65, 5.0, Color("f2f0d0"))
+        return
+    if id == "STAR BOLT":
         draw_colored_polygon(PackedVector2Array([anchor + Vector2(0, -12), anchor + Vector2(7, 0), anchor + Vector2(0, 12), anchor + Vector2(-7, 0)]), data.color)
     elif id == "GRAVITY NOVA":
         draw_arc(anchor, 12.0, 0, TAU, 16, data.color, 3.0); draw_circle(anchor, 4.0, data.color)
@@ -432,6 +547,8 @@ func _draw() -> void:
         var diamond := PackedVector2Array([pickup.position + Vector2(0, -22), pickup.position + Vector2(22, 0), pickup.position + Vector2(0, 22), pickup.position + Vector2(-22, 0)])
         draw_colored_polygon(diamond, Color("18253a")); draw_polyline(PackedVector2Array([diamond[0], diamond[1], diamond[2], diamond[3], diamond[0]]), data.color, 3.0)
         draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-55, 42), pickup.name, HORIZONTAL_ALIGNMENT_CENTER, 110, 10, Color("edf2e9")); draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-55, 56), pickup.family, HORIZONTAL_ALIGNMENT_CENTER, 110, 8, data.color)
+        if data.family == "MELEE":
+            draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-75, 70), "%s  |  %s" % [data.strength, data.weakness], HORIZONTAL_ALIGNMENT_CENTER, 150, 7, Color("aebbb2"))
     for projectile in projectiles:
         if projectile.impact:
             draw_circle(projectile.position, projectile.radius + 8.0, Color(projectile.color, .18)); draw_arc(projectile.position, projectile.radius, 0, TAU, 24, projectile.color, 4.0)
@@ -444,9 +561,12 @@ func _draw() -> void:
             draw_line(projectile.position - projectile.velocity.normalized() * 14.0, projectile.position, projectile.color, 5.0); draw_circle(projectile.position, projectile.radius, projectile.color)
     for enemy in enemies:
         draw_monster(enemy, MONSTERS[enemy.type])
+    for impact in melee_impacts:
+        draw_melee_impact(impact)
     if player:
         draw_knight()
         for index in equipped.size(): draw_equipped_weapon(equipped[index], index, equipped.size())
     if mode == "start": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .78)); draw_string(ThemeDB.fallback_font, Vector2(390, 315), "CROWN OF THE ABSOLUTE", HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(430, 355), "MOVE  /  COLLECT RELICS  /  ASCEND", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("63d1c2")); draw_string(ThemeDB.fallback_font, Vector2(470, 410), "CLICK TO ENTER  ·  R TO RESTART", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("aebbb2"))
     if mode == "ascension": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(410, 155), "CONNECTED ASCENSION WEB", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(470, 190), "%s PATH  ·  CHOOSE ONE CONNECTED NODE" % weapon_family, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("63d1c2")); for index in ascension_positions.size(): var position: Vector2 = ascension_positions[index]; if index < ascension_options.size(): draw_line(Vector2(640, 245), position, Color(0.38, 0.5, 0.55, .7), 2.0); var id: String = ascension_options[index]; var data: Dictionary = WEAPONS[id] if WEAPONS.has(id) else UPGRADES[id]; draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), Color("182d46")); draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), data.color, false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, -8), id, HORIZONTAL_ALIGNMENT_LEFT, 164, 13, data.color); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 16), data.get("text", "weapon node"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2"))
-    if mode == "death": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(455, 220), "VESSEL LOST", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color("ed725c")); draw_string(ThemeDB.fallback_font, Vector2(455, 260), "%d CROWN COINS  ·  PRESS R TO RETURN" % crown_coins, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("edc968")); var shop_names := ["CROWN EDGE · 30", "THRONE OF IRON · 35", "SOVEREIGN GRASP · 25"]; for index in 3: var position := Vector2(505 + index * 215, 465); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("182d46")); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("edc968"), false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 5), shop_names[index], HORIZONTAL_ALIGNMENT_LEFT, 164, 11, Color("f2f0d0"))
+    if mode == "death": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(455, 220), "VESSEL LOST", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color("ed725c")); draw_string(ThemeDB.fallback_font, Vector2(455, 260), "%d CROWN COINS  ·  PRESS R TO RETURN" % crown_coins, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("edc968")); draw_string(ThemeDB.fallback_font, Vector2(455, 300), "WAVE %02d  ·  %d KILLS  ·  %d ESSENCE  ·  +%d COINS" % [wave, run_kills, essence, run_coins_earned], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aebbb2")); var shop_names := ["CROWN EDGE · 30", "THRONE OF IRON · 35", "SOVEREIGN GRASP · 25"]; for index in 3: var position := Vector2(505 + index * 215, 465); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("182d46")); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("edc968"), false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 5), shop_names[index], HORIZONTAL_ALIGNMENT_LEFT, 164, 11, Color("f2f0d0"))
+    if mode == "victory": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(410, 220), "REGENT DEFEATED", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color("63d1c2")); draw_string(ThemeDB.fallback_font, Vector2(410, 265), "THE CROWN ENDURES  ·  50 BONUS CROWN COINS", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("edc968")); draw_string(ThemeDB.fallback_font, Vector2(410, 305), "WAVE %02d  ·  %d KILLS  ·  %d ESSENCE" % [wave, run_kills, essence], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aebbb2")); draw_string(ThemeDB.fallback_font, Vector2(470, 360), "PRESS R TO BEGIN A NEW ASCENSION", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aebbb2"))

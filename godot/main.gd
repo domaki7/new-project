@@ -406,6 +406,7 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
     else:
         var wisp := PackedVector2Array([position + Vector2(0, -radius - 5), position + Vector2(radius, 0), position + Vector2(0, radius + 5), position + Vector2(-radius, 0)])
         draw_colored_polygon(wisp, Color("101826")); draw_polyline(PackedVector2Array([wisp[0], wisp[1], wisp[2], wisp[3], wisp[0]]), data.color, 3.0)
+    draw_circle(position - Vector2(radius * .25, radius * .28), radius * .25, Color(data.color, 0.16))
     draw_circle(position + Vector2(radius * .25, -radius * .18), 3.0, data.color); draw_circle(position + Vector2(radius * .25, radius * .18), 3.0, data.color)
     draw_rect(Rect2(position + Vector2(-radius, -radius - 12), Vector2(radius * 2.0 * max(0.0, enemy.health / enemy.max_health), 4)), Color("ed725c"))
 
@@ -424,6 +425,8 @@ func draw_knight() -> void:
     draw_circle(position + Vector2(-31, 28), 7.0, Color("edc968")); draw_circle(position + Vector2(31, 28), 7.0, Color("edc968"))
     var armor := PackedVector2Array([position + Vector2(-20, -4), position + Vector2(-14, -25), position + Vector2(0, -38), position + Vector2(14, -25), position + Vector2(20, -4), position + Vector2(16, 22), position + Vector2(-16, 22)])
     draw_colored_polygon(armor, Color("aebbb2")); draw_polyline(PackedVector2Array([armor[0], armor[1], armor[2], armor[3], armor[4], armor[5], armor[6], armor[0]]), Color("edc968"), 3.0)
+    draw_colored_polygon(PackedVector2Array([position + Vector2(-13, -22), position + Vector2(0, -34), position + Vector2(10, -23), position + Vector2(5, -5), position + Vector2(-10, -5)]), Color("dbe6df"))
+    draw_line(position + Vector2(-8, -7), position + Vector2(8, -7), Color("607b80"), 2.0)
     draw_line(position + Vector2(-16, -5), position + Vector2(16, -5), Color("263744"), 7.0)
     draw_line(position + Vector2(-13, -25), position + Vector2(0, -48), Color("edc968"), 5.0); draw_line(position + Vector2(13, -25), position + Vector2(0, -48), Color("edc968"), 5.0)
     draw_line(position + Vector2(0, -35), position + Vector2(25, -50), Color("ed725c"), 6.0)
@@ -538,8 +541,13 @@ func _draw() -> void:
     var field := Rect2(Vector2.ZERO, ARENA_SIZE)
     draw_rect(field, Color("0b1425"))
     draw_circle(ARENA_SIZE * .5, 330.0, Color(0.12, 0.2, 0.34, .32))
+    draw_circle(ARENA_SIZE * .5, 260.0, Color(0.22, 0.28, 0.34, .08))
     for x in range(0, int(ARENA_SIZE.x), 48): draw_line(Vector2(x, 0), Vector2(x, ARENA_SIZE.y), Color(1, 1, 1, 0.035))
     for y in range(0, int(ARENA_SIZE.y), 48): draw_line(Vector2(0, y), Vector2(ARENA_SIZE.x, y), Color(1, 1, 1, 0.035))
+    for stone in range(34):
+        var stone_angle := TAU * float(stone) / 34.0
+        var stone_position := ARENA_SIZE * 0.5 + Vector2(cos(stone_angle), sin(stone_angle)) * (220.0 + float(stone % 3) * 34.0)
+        draw_circle(stone_position, 2.0 + float(stone % 2), Color(0.45, 0.52, 0.52, 0.13))
     draw_polyline(PackedVector2Array([Vector2(26, 26), Vector2(ARENA_SIZE.x - 26, 26), Vector2(ARENA_SIZE.x - 26, ARENA_SIZE.y - 26), Vector2(26, ARENA_SIZE.y - 26), Vector2(26, 26)]), Color(0.93, .79, .4, .22), 2.0)
     for pickup in pickups:
         var data: Dictionary = WEAPONS[pickup.name] if WEAPONS.has(pickup.name) else UPGRADES[pickup.name]

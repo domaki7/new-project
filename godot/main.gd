@@ -429,7 +429,8 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
     var health_ratio: float = max(0.0, enemy.health / enemy.max_health)
     var meter := Rect2(position + Vector2(-radius, -radius - 14), Vector2(radius * 2.0, 6.0))
     draw_rect(meter, Color(0.02, 0.04, 0.07, 0.9))
-    draw_rect(Rect2(meter.position + Vector2(1, 1), Vector2(max(0.0, (meter.size.x - 2.0) * health_ratio), 4.0)), Color("ed725c"))
+    var meter_color: Color = Color("ed725c") if health_ratio < 0.3 else data.color
+    draw_rect(Rect2(meter.position + Vector2(1, 1), Vector2(max(0.0, (meter.size.x - 2.0) * health_ratio), 4.0)), meter_color)
 
 func draw_ellipse_custom(center: Vector2, radius: Vector2, color: Color) -> void:
     var points := PackedVector2Array()

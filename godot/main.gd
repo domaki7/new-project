@@ -41,6 +41,7 @@ var weapon_ranks := {}
 var weapon_cooldowns := {}
 var weapon_swings := {}
 var melee_impacts: Array[Dictionary] = []
+var enemy_bursts: Array[Dictionary] = []
 var unlocked_nodes := {}
 var weapon_family := ""
 var level := 1
@@ -80,6 +81,8 @@ func _process(delta: float) -> void:
     for id in weapon_swings.keys(): weapon_swings[id] = max(0.0, float(weapon_swings[id]) - delta)
     for impact in melee_impacts: impact.life = max(0.0, float(impact.life) - delta)
     melee_impacts = melee_impacts.filter(func(impact: Dictionary) -> bool: return impact.life > 0.0)
+    for burst in enemy_bursts: burst.life = max(0.0, float(burst.life) - delta)
+    enemy_bursts = enemy_bursts.filter(func(burst: Dictionary) -> bool: return burst.life > 0.0)
     invulnerable = max(0.0, invulnerable - delta)
     update_hud()
     queue_redraw()
@@ -143,7 +146,7 @@ func save_path_nodes() -> void:
 
 func start_game() -> void:
     mode = "play"
-    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
+    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
@@ -325,6 +328,7 @@ func update_enemies(delta: float) -> void:
         if enemy.health <= 0.0:
             essence += enemy.essence
             run_kills += 1
+            enemy_bursts.append({"position": enemy.position, "color": MONSTERS[enemy.type].color, "radius": enemy.radius, "life": 0.32})
             enemies.erase(enemy)
             if enemy.type == "DREAD REGENT":
                 mode = "victory"
@@ -521,6 +525,20 @@ func draw_melee_impact(impact: Dictionary) -> void:
         draw_circle(position, 6.0 + progress * 7.0, Color("f2f0d0"))
         draw_arc(position, 12.0 + progress * 14.0, 0, TAU, 12, Color(color.r, color.g, color.b, fade), 3.0)
 
+func draw_enemy_burst(burst: Dictionary) -> void:
+    var progress: float = 1.0 - float(burst.life) / 0.32
+    var fade: float = float(burst.life) / 0.32
+    var position: Vector2 = burst.position
+    var radius: float = float(burst.radius) * (0.8 + progress * 1.8)
+    var color: Color = burst.color
+    draw_circle(position, radius * 0.35, Color(color.r, color.g, color.b, 0.16 * fade))
+    draw_arc(position, radius, 0, TAU, 18, Color(color.r, color.g, color.b, fade), 3.0)
+    for ray in range(6):
+        var ray_angle := TAU * float(ray) / 6.0 + progress
+        var ray_start := position + Vector2(cos(ray_angle), sin(ray_angle)) * radius * 0.75
+        var ray_end := position + Vector2(cos(ray_angle), sin(ray_angle)) * radius * 1.35
+        draw_line(ray_start, ray_end, Color(1.0, 0.9, 0.65, fade), 2.0)
+
 func draw_equipped_weapon(id: String, index: int, total: int) -> void:
     var data: Dictionary = WEAPONS[id]
     var orbit_angle: float = TAU * float(index) / float(max(1, total)) - PI / 2.0
@@ -604,6 +622,8 @@ func _draw() -> void:
         draw_monster(enemy, MONSTERS[enemy.type])
     for impact in melee_impacts:
         draw_melee_impact(impact)
+    for burst in enemy_bursts:
+        draw_enemy_burst(burst)
     if player:
         draw_knight()
         for index in equipped.size(): draw_equipped_weapon(equipped[index], index, equipped.size())

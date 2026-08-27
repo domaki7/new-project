@@ -577,6 +577,13 @@ func _draw() -> void:
         draw_circle(pickup.position, 34.0 + sin(elapsed * 4.0) * 5.0, Color(data.color, 0.15))
         var diamond := PackedVector2Array([pickup.position + Vector2(0, -22), pickup.position + Vector2(22, 0), pickup.position + Vector2(0, 22), pickup.position + Vector2(-22, 0)])
         draw_colored_polygon(diamond, Color("18253a")); draw_polyline(PackedVector2Array([diamond[0], diamond[1], diamond[2], diamond[3], diamond[0]]), data.color, 3.0)
+        if WEAPONS.has(pickup.name):
+            if data.family == "MELEE" and data.style == "blade":
+                draw_sword(pickup.position, -PI * 0.5, 24.0, data.color)
+            elif data.family == "MELEE" and data.style == "nova":
+                draw_arc(pickup.position, 13.0, 0, TAU, 18, data.color, 3.0); draw_circle(pickup.position, 4.0, data.color)
+            elif data.family == "MELEE" and data.style == "chain":
+                draw_line(pickup.position + Vector2(-14, 0), pickup.position + Vector2(14, 0), data.color, 3.0); draw_circle(pickup.position + Vector2(-8, 0), 4.0, Color("f2f0d0")); draw_circle(pickup.position + Vector2(8, 0), 5.0, Color("f2f0d0"))
         draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-55, 42), pickup.name, HORIZONTAL_ALIGNMENT_CENTER, 110, 10, Color("edf2e9")); draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-55, 56), pickup.family, HORIZONTAL_ALIGNMENT_CENTER, 110, 8, data.color)
         if data.family == "MELEE":
             draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-75, 70), "%s  |  %s" % [data.strength, data.weakness], HORIZONTAL_ALIGNMENT_CENTER, 150, 7, Color("aebbb2"))

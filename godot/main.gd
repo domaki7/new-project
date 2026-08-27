@@ -3,9 +3,9 @@ extends Node2D
 const ARENA_SIZE := Vector2(1280, 720)
 const MAX_WEAPONS := 5
 const WEAPONS := {
-    "VOID BLADE": {"family": "MELEE", "color": Color("ed725c"), "cooldown": 0.8, "kind": "blade", "style": "blade", "damage_mult": 1.5, "reach": 100.0, "swing_arc": 1.15, "swing_time": 0.28, "strength": "FAST / PRECISION", "weakness": "SHORT REACH"},
-    "GRAVITY NOVA": {"family": "MELEE", "color": Color("63d1c2"), "cooldown": 1.5, "kind": "nova", "style": "nova", "damage_mult": 2.2, "reach": 126.0, "swing_arc": 1.8, "swing_time": 0.42, "strength": "HEAVY / WIDE", "weakness": "SLOW STARTUP"},
-    "SOUL CHAIN": {"family": "MELEE", "color": Color("a98cff"), "cooldown": 1.1, "kind": "chain", "style": "chain", "damage_mult": 1.3, "reach": 148.0, "swing_arc": 2.1, "swing_time": 0.32, "strength": "LONG / POISON", "weakness": "LOWER BURST"},
+    "VOID BLADE": {"family": "MELEE", "color": Color("ed725c"), "cooldown": 0.8, "kind": "blade", "style": "blade", "damage_mult": 1.5, "reach": 100.0, "swing_arc": 1.15, "swing_time": 0.28, "orbit_speed": 0.35, "strength": "FAST / PRECISION", "weakness": "SHORT REACH"},
+    "GRAVITY NOVA": {"family": "MELEE", "color": Color("63d1c2"), "cooldown": 1.5, "kind": "nova", "style": "nova", "damage_mult": 2.2, "reach": 126.0, "swing_arc": 1.8, "swing_time": 0.42, "orbit_speed": -0.18, "strength": "HEAVY / WIDE", "weakness": "SLOW STARTUP"},
+    "SOUL CHAIN": {"family": "MELEE", "color": Color("a98cff"), "cooldown": 1.1, "kind": "chain", "style": "chain", "damage_mult": 1.3, "reach": 148.0, "swing_arc": 2.1, "swing_time": 0.32, "orbit_speed": 0.55, "strength": "LONG / POISON", "weakness": "LOWER BURST"},
     "STAR BOLT": {"family": "RANGED", "color": Color("edc968"), "cooldown": 0.32, "kind": "bolt"},
     "ROYAL METEOR": {"family": "RANGED", "color": Color("ff9b52"), "cooldown": 2.2, "kind": "meteor"},
     "FROST LANCE": {"family": "RANGED", "color": Color("9fd6ff"), "cooldown": 0.65, "kind": "frost"},
@@ -543,6 +543,7 @@ func draw_enemy_burst(burst: Dictionary) -> void:
 func draw_equipped_weapon(id: String, index: int, total: int) -> void:
     var data: Dictionary = WEAPONS[id]
     var orbit_angle: float = TAU * float(index) / float(max(1, total)) - PI / 2.0
+    orbit_angle += elapsed * float(data.get("orbit_speed", 0.0))
     var angle: float = orbit_angle
     var radius: float = 45.0
     var style: String = data.get("style", "blade")

@@ -647,8 +647,9 @@ func draw_equipped_weapon(id: String, index: int, total: int) -> void:
     if data.family == "MELEE" and swing_remaining > 0.0:
         var swing_time: float = float(data.get("swing_time", 0.3))
         var progress: float = 1.0 - swing_remaining / max(0.01, swing_time)
+        var eased_progress: float = progress * progress * (3.0 - 2.0 * progress)
         var attack_angle: float = float(weapon_swings.get(id + "_angle", blade_angle))
-        angle = attack_angle - float(data.get("swing_arc", 1.2)) * 0.5 + progress * float(data.get("swing_arc", 1.2))
+        angle = attack_angle - float(data.get("swing_arc", 1.2)) * 0.5 + eased_progress * float(data.get("swing_arc", 1.2))
         radius = 18.0
         draw_melee_swing(style, player.position, angle, float(data.get("reach", 90.0)), data.color, swing_remaining / max(0.01, swing_time))
         return

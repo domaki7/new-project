@@ -381,6 +381,39 @@ func draw_knight() -> void:
     draw_line(position + Vector2(38, 20), position + Vector2(51, 39), Color("dbe6df"), 5.0)
     draw_circle(position + Vector2(-6, -17), 3.0, Color("edc968")); draw_circle(position + Vector2(6, -17), 3.0, Color("edc968"))
 
+func draw_equipped_weapon(id: String, index: int, total: int) -> void:
+    var data: Dictionary = WEAPONS[id]
+    var orbit_angle: float = TAU * float(index) / float(max(1, total)) - PI / 2.0
+    var angle: float = orbit_angle
+    var radius: float = 45.0
+    if id == "VOID BLADE" and blade_flash > 0.0:
+        var progress: float = 1.0 - blade_flash / 0.3
+        angle = blade_angle - 1.15 + progress * 2.3
+        radius = 18.0
+    var anchor: Vector2 = player.position + Vector2(cos(angle), sin(angle)) * radius
+    if id == "VOID BLADE" and blade_flash > 0.0:
+        var tip: Vector2 = player.position + Vector2(cos(angle), sin(angle)) * 88.0
+        draw_line(anchor, tip, Color("dbe6df"), 10.0); draw_line(anchor, tip, Color("ffffff"), 2.0)
+        draw_line(anchor + Vector2(-sin(angle), cos(angle)) * 12.0, anchor + Vector2(sin(angle), -cos(angle)) * 12.0, data.color, 5.0)
+        draw_arc(player.position, 78.0, angle - .7, angle + .7, 20, Color(1.0, .94, .55, blade_flash / .3), 4.0)
+    elif id == "VOID BLADE":
+        draw_line(anchor - Vector2(cos(angle), sin(angle)) * 17.0, anchor + Vector2(cos(angle), sin(angle)) * 17.0, Color("dbe6df"), 7.0)
+        draw_line(anchor + Vector2(-sin(angle), cos(angle)) * 10.0, anchor + Vector2(sin(angle), -cos(angle)) * 10.0, data.color, 4.0)
+    elif id == "STAR BOLT":
+        draw_colored_polygon(PackedVector2Array([anchor + Vector2(0, -12), anchor + Vector2(7, 0), anchor + Vector2(0, 12), anchor + Vector2(-7, 0)]), data.color)
+    elif id == "GRAVITY NOVA":
+        draw_arc(anchor, 12.0, 0, TAU, 16, data.color, 3.0); draw_circle(anchor, 4.0, data.color)
+    elif id == "SOUL CHAIN":
+        draw_arc(anchor + Vector2(0, -7), 7.0, 0, TAU, 12, data.color, 3.0); draw_arc(anchor + Vector2(0, 8), 7.0, 0, TAU, 12, data.color, 3.0)
+    elif id == "ROYAL METEOR":
+        draw_colored_polygon(PackedVector2Array([anchor + Vector2(0, -15), anchor + Vector2(9, 5), anchor + Vector2(0, 13), anchor + Vector2(-9, 5)]), data.color)
+    elif id == "FROST LANCE":
+        draw_colored_polygon(PackedVector2Array([anchor + Vector2(0, -16), anchor + Vector2(8, 0), anchor + Vector2(0, 16), anchor + Vector2(-8, 0)]), data.color)
+    elif id == "VENOM ORB":
+        draw_circle(anchor, 11.0, data.color); draw_arc(anchor, 11.0, 0, TAU, 16, Color("d9ffb7"), 2.0)
+    elif id == "STORM SIGIL":
+        draw_colored_polygon(PackedVector2Array([anchor + Vector2(6, -16), anchor + Vector2(-4, -2), anchor + Vector2(3, -2), anchor + Vector2(-7, 16), anchor + Vector2(8, 1), anchor + Vector2(1, 1)]), data.color)
+
 func _draw() -> void:
     var field := Rect2(Vector2.ZERO, ARENA_SIZE)
     draw_rect(field, Color("0b1425"))
@@ -399,6 +432,7 @@ func _draw() -> void:
         draw_monster(enemy, MONSTERS[enemy.type])
     if player:
         draw_knight()
+        for index in equipped.size(): draw_equipped_weapon(equipped[index], index, equipped.size())
     if mode == "start": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .78)); draw_string(ThemeDB.fallback_font, Vector2(390, 315), "CROWN OF THE ABSOLUTE", HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(430, 355), "MOVE  /  COLLECT RELICS  /  ASCEND", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("63d1c2")); draw_string(ThemeDB.fallback_font, Vector2(470, 410), "CLICK TO ENTER  ·  R TO RESTART", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("aebbb2"))
     if mode == "ascension": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(410, 155), "CONNECTED ASCENSION WEB", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(470, 190), "%s PATH  ·  CHOOSE ONE CONNECTED NODE" % weapon_family, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("63d1c2")); for index in ascension_positions.size(): var position: Vector2 = ascension_positions[index]; if index < ascension_options.size(): draw_line(Vector2(640, 245), position, Color(0.38, 0.5, 0.55, .7), 2.0); var id: String = ascension_options[index]; var data: Dictionary = WEAPONS[id] if WEAPONS.has(id) else UPGRADES[id]; draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), Color("182d46")); draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), data.color, false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, -8), id, HORIZONTAL_ALIGNMENT_LEFT, 164, 13, data.color); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 16), data.get("text", "weapon node"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2"))
     if mode == "death": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(455, 220), "VESSEL LOST", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color("ed725c")); draw_string(ThemeDB.fallback_font, Vector2(455, 260), "%d CROWN COINS  ·  PRESS R TO RETURN" % crown_coins, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("edc968")); var shop_names := ["CROWN EDGE · 30", "THRONE OF IRON · 35", "SOVEREIGN GRASP · 25"]; for index in 3: var position := Vector2(505 + index * 215, 465); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("182d46")); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("edc968"), false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 5), shop_names[index], HORIZONTAL_ALIGNMENT_LEFT, 164, 11, Color("f2f0d0"))

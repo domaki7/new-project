@@ -192,7 +192,7 @@ func spawn_enemy() -> void:
     elif roll < 0.78: type = "ORACLE"
     var data: Dictionary = MONSTERS[type]
     var health: float = data.health + wave * 14.0
-    enemies.append({"position": position, "type": type, "radius": data.radius, "health": health, "max_health": health, "speed": data.speed + wave * 4.0, "damage": data.damage, "essence": data.essence, "shot_timer": 1.5, "poison": 0.0, "slow": 0.0})
+    enemies.append({"position": position, "type": type, "radius": data.radius, "health": health, "max_health": health, "speed": data.speed + wave * 4.0, "damage": data.damage, "essence": data.essence, "shot_timer": 1.5, "poison": 0.0, "slow": 0.0, "hit_flash": 0.0})
 
 func spawn_pickup() -> void:
     var options: Array[String] = []
@@ -277,6 +277,9 @@ func fire_weapon(id: String, target: Dictionary) -> void:
                     hit *= 1.25 if dist > reach * 0.7 else 0.9
                     enemy.poison = max(enemy.poison, 1.0)
                 enemy.health -= hit
+                enemy.hit_flash = 0.14
+                var recoil: float = 10.0 if data.kind == "blade" else 18.0 if data.kind == "nova" else 7.0
+                enemy.position += relative.normalized() * recoil
                 melee_impacts.append({"position": enemy.position, "style": data.style, "color": data.color, "life": 0.22})
     elif data.kind == "storm":
         for enemy in enemies:
@@ -315,7 +318,7 @@ func update_enemies(delta: float) -> void:
     for enemy in enemies.duplicate():
         var angle: float = enemy.position.angle_to_point(player.position)
         var separation: float = -1.0 if enemy.type == "ORACLE" and enemy.position.distance_to(player.position) < 240.0 else 1.0
-        enemy.slow = max(0.0, enemy.slow - delta); enemy.poison = max(0.0, enemy.poison - delta)
+        enemy.slow = max(0.0, enemy.slow - delta); enemy.poison = max(0.0, enemy.poison - delta); enemy.hit_flash = max(0.0, enemy.hit_flash - delta)
         enemy.health -= 7.0 * delta if enemy.poison > 0.0 else 0.0
         enemy.position += Vector2(cos(angle), sin(angle)) * enemy.speed * separation * (0.45 if enemy.slow > 0 else 1.0) * delta
         if enemy.position.distance_to(player.position) < enemy.radius + 17.0: damage_player(enemy.damage * delta)
@@ -411,7 +414,8 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
     else:
         var wisp := PackedVector2Array([position + Vector2(0, -radius - 5), position + Vector2(radius, 0), position + Vector2(0, radius + 5), position + Vector2(-radius, 0)])
         draw_colored_polygon(wisp, Color("101826")); draw_polyline(PackedVector2Array([wisp[0], wisp[1], wisp[2], wisp[3], wisp[0]]), data.color, 3.0)
-    draw_circle(position - Vector2(radius * .25, radius * .28), radius * .25, Color(data.color, 0.16))
+    var enemy_color: Color = Color("ffffff") if enemy.hit_flash > 0.0 else data.color
+    draw_circle(position - Vector2(radius * .25, radius * .28), radius * .25, Color(enemy_color, 0.16))
     draw_circle(position + Vector2(radius * .25, -radius * .18), 3.0, data.color); draw_circle(position + Vector2(radius * .25, radius * .18), 3.0, data.color)
     var health_ratio: float = max(0.0, enemy.health / enemy.max_health)
     var meter := Rect2(position + Vector2(-radius, -radius - 14), Vector2(radius * 2.0, 6.0))

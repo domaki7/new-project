@@ -411,6 +411,8 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
         if enemy.type == "DREAD REGENT":
             var crown := PackedVector2Array([position + Vector2(-radius * .7, -radius * .8), position + Vector2(-radius * .45, -radius * 1.35), position + Vector2(-radius * .12, -radius * .95), position + Vector2(radius * .2, -radius * 1.4), position + Vector2(radius * .65, -radius * .78)])
             draw_polyline(crown, Color("edc968"), 4.0)
+            draw_circle(position + Vector2(-radius * .45, -radius * 1.12), 3.0, Color("ed725c"))
+            draw_circle(position + Vector2(radius * .2, -radius * 1.18), 3.0, Color("63d1c2"))
     elif enemy.type == "CHARGER":
         var horned := PackedVector2Array([position + Vector2(radius + 9, 0), position + Vector2(0, radius), position + Vector2(-radius, radius * .45), position + Vector2(-radius, -radius * .45), position + Vector2(0, -radius)])
         draw_colored_polygon(horned, Color("101826")); draw_polyline(PackedVector2Array([horned[0], horned[1], horned[2], horned[3], horned[4], horned[0]]), data.color, 3.0)
@@ -440,6 +442,7 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
         draw_circle(position, radius * 0.5, Color("101826"))
         draw_arc(position, radius * 0.52, elapsed * 0.9, elapsed * 0.9 + PI, 12, data.color, 2.0)
     var enemy_color: Color = Color("ffffff") if enemy.hit_flash > 0.0 else data.color
+    draw_circle(position + Vector2(-radius * 0.3, radius * 0.45), radius * 0.16, Color(enemy_color, 0.18))
     if enemy.hit_flash > 0.0:
         draw_arc(position, radius + 5.0, 0, TAU, 20, Color(1.0, 0.9, 0.65, enemy.hit_flash / 0.14), 3.0)
     draw_circle(position - Vector2(radius * .25, radius * .28), radius * .25, Color(enemy_color, 0.16))

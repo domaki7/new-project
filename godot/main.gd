@@ -337,10 +337,57 @@ func buy_meta(kind: String, cost: int) -> void:
     elif kind == "range": meta_range += 1
     save_meta()
 
+func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
+    var position: Vector2 = enemy.position
+    var radius: float = enemy.radius
+    draw_circle(position + Vector2(0, radius + 8), radius * 0.9, Color(0, 0, 0, 0.35))
+    draw_circle(position, radius + 4, Color(data.color, 0.08))
+    if enemy.type == "BRUTE" or enemy.type == "DREAD REGENT":
+        var body := PackedVector2Array([position + Vector2(-radius, -radius * .55), position + Vector2(-radius * .7, -radius), position + Vector2(radius * .7, -radius), position + Vector2(radius, -radius * .55), position + Vector2(radius * .8, radius), position + Vector2(-radius * .8, radius)])
+        draw_colored_polygon(body, Color("101826")); draw_polyline(PackedVector2Array([body[0], body[1], body[2], body[3], body[4], body[5], body[0]]), data.color, 3.0)
+        draw_line(position + Vector2(-radius * .65, -radius * .7), position + Vector2(-radius * .35, -radius - 10), data.color, 4.0); draw_line(position + Vector2(radius * .35, -radius * .7), position + Vector2(radius * .65, -radius - 10), data.color, 4.0)
+    elif enemy.type == "CHARGER":
+        var horned := PackedVector2Array([position + Vector2(radius + 9, 0), position + Vector2(0, radius), position + Vector2(-radius, radius * .45), position + Vector2(-radius, -radius * .45), position + Vector2(0, -radius)])
+        draw_colored_polygon(horned, Color("101826")); draw_polyline(PackedVector2Array([horned[0], horned[1], horned[2], horned[3], horned[4], horned[0]]), data.color, 3.0)
+    elif enemy.type == "SPLITTER":
+        draw_circle(position, radius, Color("101826")); draw_arc(position, radius, 0, TAU, 16, data.color, 3.0); draw_line(position + Vector2(-radius, 0), position + Vector2(radius, 0), data.color, 2.0)
+    elif enemy.type == "LEECH":
+        draw_set_transform(position, atan2(player.position.y - position.y, player.position.x - position.x)); draw_ellipse_custom(Vector2.ZERO, Vector2(radius * 1.45, radius * .65), Color("101826")); draw_arc(Vector2.ZERO, radius * .8, 0, TAU, 16, data.color, 3.0); draw_set_transform(Vector2.ZERO, 0.0)
+    else:
+        var wisp := PackedVector2Array([position + Vector2(0, -radius - 5), position + Vector2(radius, 0), position + Vector2(0, radius + 5), position + Vector2(-radius, 0)])
+        draw_colored_polygon(wisp, Color("101826")); draw_polyline(PackedVector2Array([wisp[0], wisp[1], wisp[2], wisp[3], wisp[0]]), data.color, 3.0)
+    draw_circle(position + Vector2(radius * .25, -radius * .18), 3.0, data.color); draw_circle(position + Vector2(radius * .25, radius * .18), 3.0, data.color)
+    draw_rect(Rect2(position + Vector2(-radius, -radius - 12), Vector2(radius * 2.0 * max(0.0, enemy.health / enemy.max_health), 4)), Color("ed725c"))
+
+func draw_ellipse_custom(center: Vector2, radius: Vector2, color: Color) -> void:
+    var points := PackedVector2Array()
+    for index in range(24):
+        var angle := TAU * float(index) / 24.0
+        points.append(center + Vector2(cos(angle) * radius.x, sin(angle) * radius.y))
+    draw_colored_polygon(points, color)
+
+func draw_knight() -> void:
+    var position: Vector2 = player.position
+    draw_ellipse_custom(position + Vector2(0, 27), Vector2(32, 10), Color(0, 0, 0, .48))
+    draw_line(position + Vector2(-17, 5), position + Vector2(-31, 28), Color("aebbb2"), 8.0); draw_line(position + Vector2(17, 5), position + Vector2(31, 28), Color("aebbb2"), 8.0)
+    draw_line(position + Vector2(-11, 16), position + Vector2(-14, 42), Color("53656a"), 10.0); draw_line(position + Vector2(11, 16), position + Vector2(14, 42), Color("53656a"), 10.0)
+    draw_circle(position + Vector2(-31, 28), 7.0, Color("edc968")); draw_circle(position + Vector2(31, 28), 7.0, Color("edc968"))
+    var armor := PackedVector2Array([position + Vector2(-20, -4), position + Vector2(-14, -25), position + Vector2(0, -38), position + Vector2(14, -25), position + Vector2(20, -4), position + Vector2(16, 22), position + Vector2(-16, 22)])
+    draw_colored_polygon(armor, Color("aebbb2")); draw_polyline(PackedVector2Array([armor[0], armor[1], armor[2], armor[3], armor[4], armor[5], armor[6], armor[0]]), Color("edc968"), 3.0)
+    draw_line(position + Vector2(-16, -5), position + Vector2(16, -5), Color("263744"), 7.0)
+    draw_line(position + Vector2(-13, -25), position + Vector2(0, -48), Color("edc968"), 5.0); draw_line(position + Vector2(13, -25), position + Vector2(0, -48), Color("edc968"), 5.0)
+    draw_line(position + Vector2(0, -35), position + Vector2(25, -50), Color("ed725c"), 6.0)
+    draw_circle(position + Vector2(28, 10), 14.0, Color("607b80")); draw_arc(position + Vector2(28, 10), 14.0, 0, TAU, 16, Color("edc968"), 3.0)
+    draw_line(position + Vector2(38, 20), position + Vector2(51, 39), Color("dbe6df"), 5.0)
+    draw_circle(position + Vector2(-6, -17), 3.0, Color("edc968")); draw_circle(position + Vector2(6, -17), 3.0, Color("edc968"))
+
 func _draw() -> void:
-    draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color("101a2c"))
-    for x in range(0, int(ARENA_SIZE.x), 48): draw_line(Vector2(x, 0), Vector2(x, ARENA_SIZE.y), Color(1, 1, 1, 0.04))
-    for y in range(0, int(ARENA_SIZE.y), 48): draw_line(Vector2(0, y), Vector2(ARENA_SIZE.x, y), Color(1, 1, 1, 0.04))
+    var field := Rect2(Vector2.ZERO, ARENA_SIZE)
+    draw_rect(field, Color("0b1425"))
+    draw_circle(ARENA_SIZE * .5, 330.0, Color(0.12, 0.2, 0.34, .32))
+    for x in range(0, int(ARENA_SIZE.x), 48): draw_line(Vector2(x, 0), Vector2(x, ARENA_SIZE.y), Color(1, 1, 1, 0.035))
+    for y in range(0, int(ARENA_SIZE.y), 48): draw_line(Vector2(0, y), Vector2(ARENA_SIZE.x, y), Color(1, 1, 1, 0.035))
+    draw_polyline(PackedVector2Array([Vector2(26, 26), Vector2(ARENA_SIZE.x - 26, 26), Vector2(ARENA_SIZE.x - 26, ARENA_SIZE.y - 26), Vector2(26, ARENA_SIZE.y - 26), Vector2(26, 26)]), Color(0.93, .79, .4, .22), 2.0)
     for pickup in pickups:
         var data: Dictionary = WEAPONS[pickup.name] if WEAPONS.has(pickup.name) else UPGRADES[pickup.name]
         draw_circle(pickup.position, 34.0 + sin(elapsed * 4.0) * 5.0, Color(data.color, 0.15))
@@ -349,25 +396,9 @@ func _draw() -> void:
         draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-55, 42), pickup.name, HORIZONTAL_ALIGNMENT_CENTER, 110, 10, Color("edf2e9"))
     for projectile in projectiles: draw_circle(projectile.position, projectile.radius, projectile.color)
     for enemy in enemies:
-        var data: Dictionary = MONSTERS[enemy.type]
-        draw_circle(enemy.position + Vector2(0, enemy.radius + 7), enemy.radius * .45, Color(0, 0, 0, .4)); draw_circle(enemy.position, enemy.radius, Color("0b111d")); draw_arc(enemy.position, enemy.radius, 0, TAU, 16, data.color, 3.0)
-        draw_circle(enemy.position + Vector2(5, -4), 3, data.color); draw_circle(enemy.position + Vector2(5, 5), 3, data.color); draw_rect(Rect2(enemy.position - Vector2(enemy.radius, enemy.radius + 10), Vector2(enemy.radius * 2.0 * enemy.health / enemy.max_health, 4)), Color("ed725c"))
+        draw_monster(enemy, MONSTERS[enemy.type])
     if player:
-        draw_circle(player.position + Vector2(0, 25), 30, Color(0, 0, 0, .45)); draw_circle(player.position, 20, Color("aebbb2")); draw_arc(player.position, 20, 0, TAU, 16, Color("edc968"), 3.0)
-        var crown := PackedVector2Array([player.position + Vector2(-12, -21), player.position + Vector2(0, -45), player.position + Vector2(12, -21), player.position + Vector2(0, -30)]); draw_colored_polygon(crown, Color("edc968")); draw_line(player.position + Vector2(19, 5), player.position + Vector2(43, 28), Color("aebbb2"), 5.0)
-        draw_line(player.position + Vector2(-16, 5), player.position + Vector2(-29, 25), Color("aebbb2"), 7.0); draw_line(player.position + Vector2(16, 5), player.position + Vector2(29, 25), Color("aebbb2"), 7.0)
-        draw_circle(player.position + Vector2(-29, 25), 6, Color("edc968")); draw_circle(player.position + Vector2(29, 25), 6, Color("edc968"))
-        draw_line(player.position + Vector2(-10, 16), player.position + Vector2(-13, 39), Color("53656a"), 9.0); draw_line(player.position + Vector2(10, 16), player.position + Vector2(13, 39), Color("53656a"), 9.0)
-        draw_line(player.position + Vector2(-18, 42), player.position + Vector2(-8, 42), Color("edc968"), 5.0); draw_line(player.position + Vector2(8, 42), player.position + Vector2(18, 42), Color("edc968"), 5.0)
-        if equipped.has("VOID BLADE") and blade_flash > 0.0:
-            var swing_progress: float = 1.0 - blade_flash / 0.3
-            var swing_angle: float = blade_angle - 1.15 + swing_progress * 2.3
-            var sword_start: Vector2 = player.position + Vector2(cos(swing_angle), sin(swing_angle)) * 18.0
-            var sword_end: Vector2 = player.position + Vector2(cos(swing_angle), sin(swing_angle)) * 82.0
-            draw_line(sword_start, sword_end, Color("dbe6df"), 10.0); draw_line(sword_start, sword_end, Color("ffffff"), 2.0)
-            draw_line(sword_start + Vector2(-sin(swing_angle), cos(swing_angle)) * 11.0, sword_start + Vector2(sin(swing_angle), -cos(swing_angle)) * 11.0, Color("edc968"), 5.0)
-            draw_arc(player.position, 75.0, swing_angle - .7, swing_angle + .7, 20, Color(1.0, .94, .55, blade_flash / .3), 4.0)
-        for index in equipped.size(): draw_circle(player.position + Vector2(cos(index * TAU / max(1, equipped.size())), sin(index * TAU / max(1, equipped.size()))) * 42.0, 7.0, WEAPONS[equipped[index]].color)
+        draw_knight()
     if mode == "start": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .78)); draw_string(ThemeDB.fallback_font, Vector2(390, 315), "CROWN OF THE ABSOLUTE", HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(430, 355), "MOVE  /  COLLECT RELICS  /  ASCEND", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("63d1c2")); draw_string(ThemeDB.fallback_font, Vector2(470, 410), "CLICK TO ENTER  ·  R TO RESTART", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("aebbb2"))
     if mode == "ascension": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(410, 155), "CONNECTED ASCENSION WEB", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(470, 190), "%s PATH  ·  CHOOSE ONE CONNECTED NODE" % weapon_family, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("63d1c2")); for index in ascension_positions.size(): var position: Vector2 = ascension_positions[index]; if index < ascension_options.size(): draw_line(Vector2(640, 245), position, Color(0.38, 0.5, 0.55, .7), 2.0); var id: String = ascension_options[index]; var data: Dictionary = WEAPONS[id] if WEAPONS.has(id) else UPGRADES[id]; draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), Color("182d46")); draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), data.color, false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, -8), id, HORIZONTAL_ALIGNMENT_LEFT, 164, 13, data.color); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 16), data.get("text", "weapon node"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2"))
     if mode == "death": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(455, 220), "VESSEL LOST", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color("ed725c")); draw_string(ThemeDB.fallback_font, Vector2(455, 260), "%d CROWN COINS  ·  PRESS R TO RETURN" % crown_coins, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("edc968")); var shop_names := ["CROWN EDGE · 30", "THRONE OF IRON · 35", "SOVEREIGN GRASP · 25"]; for index in 3: var position := Vector2(505 + index * 215, 465); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("182d46")); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("edc968"), false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 5), shop_names[index], HORIZONTAL_ALIGNMENT_LEFT, 164, 11, Color("f2f0d0"))

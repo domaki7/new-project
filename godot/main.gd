@@ -266,7 +266,7 @@ func spawn_enemy() -> void:
     elif roll < 0.78: type = "ORACLE"
     var data: Dictionary = MONSTERS[type]
     var health: float = data.health + wave * 14.0
-    enemies.append({"position": position, "type": type, "radius": data.radius, "health": health, "max_health": health, "speed": data.speed + wave * 4.0, "damage": data.damage, "essence": data.essence, "shot_timer": 1.5, "poison": 0.0, "slow": 0.0, "hit_flash": 0.0})
+    enemies.append({"position": position, "type": type, "radius": data.radius, "health": health, "max_health": health, "speed": data.speed + wave * 4.0, "velocity": Vector2.ZERO, "damage": data.damage, "essence": data.essence, "shot_timer": 1.5, "poison": 0.0, "slow": 0.0, "hit_flash": 0.0})
 
 func spawn_pickup() -> void:
     var options: Array[String] = []
@@ -411,9 +411,12 @@ func update_enemies(delta: float) -> void:
             var crowd_radius: float = enemy.radius + other.radius + 8.0
             if crowd_distance > 0.1 and crowd_distance < crowd_radius:
                 crowd_push += offset.normalized() * (crowd_radius - crowd_distance) / crowd_radius
-        var movement_direction := Vector2(cos(angle), sin(angle)) * separation
+        var movement_direction: Vector2 = Vector2(cos(angle), sin(angle)) * separation
         movement_direction = (movement_direction + crowd_push * 1.8).normalized()
-        enemy.position += movement_direction * enemy.speed * (0.45 if enemy.slow > 0 else 1.0) * delta
+        var enemy_target_velocity: Vector2 = movement_direction * enemy.speed * (0.45 if enemy.slow > 0 else 1.0)
+        var enemy_steering: float = 520.0 if enemy.slow <= 0.0 else 260.0
+        enemy.velocity = enemy.velocity.move_toward(enemy_target_velocity, enemy_steering * delta)
+        enemy.position += enemy.velocity * delta
         if enemy.position.distance_to(player.position) < enemy.radius + 17.0: damage_player(enemy.damage * delta)
         if enemy.health <= 0.0:
             essence += enemy.essence

@@ -43,6 +43,7 @@ var weapon_cooldowns := {}
 var weapon_swings := {}
 var melee_impacts: Array[Dictionary] = []
 var enemy_bursts: Array[Dictionary] = []
+var projectile_impacts: Array[Dictionary] = []
 var unlocked_nodes := {}
 var weapon_family := ""
 var level := 1
@@ -114,6 +115,7 @@ func play_sfx(kind: String) -> void:
     elif kind == "damage": frequency = 95.0; duration = 0.2; volume = 0.18
     elif kind == "defeat": frequency = 180.0; duration = 0.14; volume = 0.12
     elif kind == "victory": frequency = 440.0; duration = 0.45; volume = 0.16
+    elif kind == "impact": frequency = 360.0; duration = 0.06; volume = 0.08
     elif kind == "dash": frequency = 260.0; duration = 0.1; volume = 0.12
     var frame_count: int = int(44100.0 * duration)
     for frame in frame_count:
@@ -139,6 +141,8 @@ func _process(delta: float) -> void:
     melee_impacts = melee_impacts.filter(func(impact: Dictionary) -> bool: return impact.life > 0.0)
     for burst in enemy_bursts: burst.life = max(0.0, float(burst.life) - delta)
     enemy_bursts = enemy_bursts.filter(func(burst: Dictionary) -> bool: return burst.life > 0.0)
+    for impact in projectile_impacts: impact.life = max(0.0, float(impact.life) - delta)
+    projectile_impacts = projectile_impacts.filter(func(impact: Dictionary) -> bool: return impact.life > 0.0)
     invulnerable = max(0.0, invulnerable - delta)
     update_hud()
     queue_redraw()
@@ -203,7 +207,7 @@ func save_path_nodes() -> void:
 
 func start_game() -> void:
     mode = "play"
-    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
+    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
@@ -392,6 +396,8 @@ func update_projectiles(delta: float) -> void:
             for enemy in enemies:
                 if enemy.position.distance_to(projectile.position) < enemy.radius + projectile.radius:
                     enemy.health -= projectile.damage
+                    projectile_impacts.append({"position": projectile.position, "color": projectile.color, "life": 0.14})
+                    play_sfx("impact")
                     if projectile.kind == "frost": enemy.slow = 1.8
                     if projectile.kind == "venom": enemy.poison = 3.0
                     projectile.life = 0.0
@@ -682,6 +688,16 @@ func draw_enemy_burst(burst: Dictionary) -> void:
         var ray_end := position + Vector2(cos(ray_angle), sin(ray_angle)) * radius * 1.35
         draw_line(ray_start, ray_end, Color(1.0, 0.9, 0.65, fade), 2.0)
 
+func draw_projectile_impact(impact: Dictionary) -> void:
+    var progress: float = 1.0 - float(impact.life) / 0.14
+    var fade: float = float(impact.life) / 0.14
+    var position: Vector2 = impact.position
+    var color: Color = impact.color
+    draw_circle(position, 4.0 + progress * 8.0, Color(color.r, color.g, color.b, 0.18 * fade))
+    for ray in range(4):
+        var ray_angle := TAU * float(ray) / 4.0 + progress
+        draw_line(position + Vector2(cos(ray_angle), sin(ray_angle)) * 3.0, position + Vector2(cos(ray_angle), sin(ray_angle)) * (9.0 + progress * 8.0), Color(1.0, 0.95, 0.72, fade), 2.0)
+
 func draw_equipped_weapon(id: String, index: int, total: int) -> void:
     var data: Dictionary = WEAPONS[id]
     var orbit_angle: float = TAU * float(index) / float(max(1, total)) - PI / 2.0
@@ -789,6 +805,8 @@ func _draw() -> void:
         draw_melee_impact(impact)
     for burst in enemy_bursts:
         draw_enemy_burst(burst)
+    for impact in projectile_impacts:
+        draw_projectile_impact(impact)
     if player:
         draw_knight()
         for index in equipped.size(): draw_equipped_weapon(equipped[index], index, equipped.size())

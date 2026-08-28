@@ -57,6 +57,9 @@ var blade_angle := 0.0
 var blade_flash := 0.0
 var player_hit_flash := 0.0
 var screen_shake := 0.0
+var dash_cooldown := 0.0
+var dash_requested := false
+var dash_flash := 0.0
 var mode := "start"
 var status := "UNARMED - COLLECT YOUR FIRST RELIC"
 var crown_coins := 0
@@ -110,6 +113,7 @@ func play_sfx(kind: String) -> void:
     elif kind == "damage": frequency = 95.0; duration = 0.2; volume = 0.18
     elif kind == "defeat": frequency = 180.0; duration = 0.14; volume = 0.12
     elif kind == "victory": frequency = 440.0; duration = 0.45; volume = 0.16
+    elif kind == "dash": frequency = 260.0; duration = 0.1; volume = 0.12
     var frame_count: int = int(44100.0 * duration)
     for frame in frame_count:
         var time: float = float(frame) / 44100.0
@@ -124,6 +128,8 @@ func _process(delta: float) -> void:
     blade_flash = max(0.0, blade_flash - delta)
     player_hit_flash = max(0.0, player_hit_flash - delta)
     screen_shake = max(0.0, screen_shake - delta * 4.5)
+    dash_cooldown = max(0.0, dash_cooldown - delta)
+    dash_flash = max(0.0, dash_flash - delta)
     for id in weapon_swings.keys(): weapon_swings[id] = max(0.0, float(weapon_swings[id]) - delta)
     for impact in melee_impacts: impact.life = max(0.0, float(impact.life) - delta)
     melee_impacts = melee_impacts.filter(func(impact: Dictionary) -> bool: return impact.life > 0.0)
@@ -145,7 +151,7 @@ func setup_hud() -> void:
     hud_labels["stats"] = make_label(layer, Vector2(650, 32), "", 14, Color("edc968"))
     hud_labels["status"] = make_label(layer, Vector2(44, 122), "", 13, Color("63d1c2"))
     hud_labels["build"] = make_label(layer, Vector2(44, 675), "", 13, Color("aebbb2"))
-    hud_labels["help"] = make_label(layer, Vector2(930, 675), "WASD / ARROWS  ·  R RESTART", 12, Color("879b9b"))
+    hud_labels["help"] = make_label(layer, Vector2(875, 675), "WASD / ARROWS  ·  SPACE DASH  ·  R RESTART", 12, Color("879b9b"))
 
 func make_label(parent: Node, position: Vector2, text: String, size: int, color: Color) -> Label:
     var label := Label.new()
@@ -192,7 +198,7 @@ func save_path_nodes() -> void:
 
 func start_game() -> void:
     mode = "play"
-    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
+    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
@@ -209,6 +215,15 @@ func update_game(delta: float) -> void:
     var target_velocity: Vector2 = movement.normalized() * player.speed if movement.length() > 0 else Vector2.ZERO
     var steering: float = 1500.0 if movement.length() > 0 else 1900.0
     player_velocity = player_velocity.move_toward(target_velocity, steering * delta)
+    if dash_requested and dash_cooldown <= 0.0:
+        var dash_direction: Vector2 = movement.normalized() if movement.length() > 0 else Vector2.RIGHT
+        player_velocity = dash_direction * 620.0
+        dash_cooldown = 1.4
+        dash_flash = 0.16
+        invulnerable = max(invulnerable, 0.24)
+        screen_shake = max(screen_shake, 0.035)
+        play_sfx("dash")
+    dash_requested = false
     player.position += player_velocity * delta
     player.position.x = clamp(player.position.x, 35.0, ARENA_SIZE.x - 35.0)
     player.position.y = clamp(player.position.y, 35.0, ARENA_SIZE.y - 35.0)
@@ -451,6 +466,7 @@ func die() -> void:
 
 func _input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and event.keycode == KEY_R: start_game()
+    if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE and mode == "play": dash_requested = true
     if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "start": start_game()
     if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "ascension":
         for index in ascension_positions.size():
@@ -550,6 +566,10 @@ func draw_knight() -> void:
     var health_color := Color("63d1c2") if health_ratio > 0.35 else Color("ed725c")
     draw_arc(position, 45.0, -PI * 0.5, -PI * 0.5 + TAU * health_ratio, 28, health_color, 3.0)
     draw_arc(position, 45.0, -PI * 0.5 + TAU * health_ratio, PI * 1.5, 28, Color(0.08, 0.12, 0.16, 0.75), 3.0)
+    if dash_flash > 0.0:
+        var dash_alpha: float = dash_flash / 0.16
+        draw_circle(position, 40.0 + (1.0 - dash_alpha) * 24.0, Color(0.62, 0.84, 1.0, 0.12 * dash_alpha))
+        draw_arc(position, 38.0 + (1.0 - dash_alpha) * 24.0, 0, TAU, 24, Color(0.62, 0.84, 1.0, dash_alpha), 3.0)
     if invulnerable > 0.0:
         var guard_alpha: float = 0.2 + abs(sin(elapsed * 18.0)) * 0.35
         draw_arc(position, 51.0, elapsed * 2.0, elapsed * 2.0 + PI * 1.55, 24, Color(1.0, 0.82, 0.45, guard_alpha), 2.0)

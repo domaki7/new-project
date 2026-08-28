@@ -212,6 +212,8 @@ func update_game(delta: float) -> void:
     player.position += player_velocity * delta
     player.position.x = clamp(player.position.x, 35.0, ARENA_SIZE.x - 35.0)
     player.position.y = clamp(player.position.y, 35.0, ARENA_SIZE.y - 35.0)
+    if (player.position.x <= 35.0 and player_velocity.x < 0.0) or (player.position.x >= ARENA_SIZE.x - 35.0 and player_velocity.x > 0.0): player_velocity.x = 0.0
+    if (player.position.y <= 35.0 and player_velocity.y < 0.0) or (player.position.y >= ARENA_SIZE.y - 35.0 and player_velocity.y > 0.0): player_velocity.y = 0.0
     spawn_timer -= delta; pickup_timer -= delta
     if spawn_timer <= 0.0:
         spawn_enemy(); spawn_timer = max(0.2, 0.9 - wave * 0.1)

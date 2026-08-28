@@ -691,7 +691,7 @@ func draw_equipped_weapon(id: String, index: int, total: int) -> void:
         draw_colored_polygon(PackedVector2Array([anchor + Vector2(6, -16), anchor + Vector2(-4, -2), anchor + Vector2(3, -2), anchor + Vector2(-7, 16), anchor + Vector2(8, 1), anchor + Vector2(1, 1)]), data.color)
 
 func _draw() -> void:
-    var shake_offset: Vector2 = Vector2(sin(elapsed * 83.0), cos(elapsed * 67.0)) * screen_shake
+    var shake_offset: Vector2 = Vector2(sin(elapsed * 83.0), cos(elapsed * 67.0)) * screen_shake * 8.0
     draw_set_transform(shake_offset, 0.0, Vector2.ONE)
     var field := Rect2(Vector2.ZERO, ARENA_SIZE)
     draw_rect(field, Color("0b1425"))

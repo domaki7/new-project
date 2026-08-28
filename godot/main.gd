@@ -548,6 +548,9 @@ func draw_knight() -> void:
     var health_color := Color("63d1c2") if health_ratio > 0.35 else Color("ed725c")
     draw_arc(position, 45.0, -PI * 0.5, -PI * 0.5 + TAU * health_ratio, 28, health_color, 3.0)
     draw_arc(position, 45.0, -PI * 0.5 + TAU * health_ratio, PI * 1.5, 28, Color(0.08, 0.12, 0.16, 0.75), 3.0)
+    if invulnerable > 0.0:
+        var guard_alpha: float = 0.2 + abs(sin(elapsed * 18.0)) * 0.35
+        draw_arc(position, 51.0, elapsed * 2.0, elapsed * 2.0 + PI * 1.55, 24, Color(1.0, 0.82, 0.45, guard_alpha), 2.0)
     if player_hit_flash > 0.0:
         var impact_fade: float = player_hit_flash / 0.2
         draw_circle(position, 48.0 - impact_fade * 12.0, Color(1.0, 0.42, 0.3, 0.12 * impact_fade))

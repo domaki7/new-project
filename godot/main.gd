@@ -446,6 +446,7 @@ func update_enemies(delta: float) -> void:
 
 func open_ascension() -> void:
     mode = "ascension"
+    essence -= 240
     ascension_options.clear()
     var candidates: Array[String] = []
     for id in WEAPONS:

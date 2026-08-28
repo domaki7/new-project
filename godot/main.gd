@@ -164,7 +164,8 @@ func make_label(parent: Node, position: Vector2, text: String, size: int, color:
 
 func update_hud() -> void:
     if hud_labels.is_empty(): return
-    hud_labels["stats"].text = "VESSEL %02d     ESSENCE %03d     WAVE %02d / 05     VITALITY %03d" % [level, essence, wave, max(0, int(player.health))]
+    var dash_text: String = "DASH READY" if dash_cooldown <= 0.0 else "DASH %.1fs" % dash_cooldown
+    hud_labels["stats"].text = "VESSEL %02d     ESSENCE %03d     WAVE %02d / 05     VITALITY %03d     %s" % [level, essence, wave, max(0, int(player.health)), dash_text]
     hud_labels["status"].text = status
     hud_labels["build"].text = "PATH: %s     ACTIVE WEAPONS: %s / %d     %s" % [weapon_family if not weapon_family.is_empty() else "UNARMED", ", ".join(equipped) if not equipped.is_empty() else "NONE", MAX_WEAPONS, "CROWN COINS: %d" % crown_coins]
 

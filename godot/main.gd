@@ -711,19 +711,22 @@ func _draw() -> void:
     draw_polyline(PackedVector2Array([Vector2(26, 26), Vector2(ARENA_SIZE.x - 26, 26), Vector2(ARENA_SIZE.x - 26, ARENA_SIZE.y - 26), Vector2(26, ARENA_SIZE.y - 26), Vector2(26, 26)]), Color(0.93, .79, .4, .22), 2.0)
     for pickup in pickups:
         var data: Dictionary = WEAPONS[pickup.name] if WEAPONS.has(pickup.name) else UPGRADES[pickup.name]
-        draw_circle(pickup.position, 34.0 + sin(elapsed * 4.0) * 5.0, Color(data.color, 0.15))
-        var diamond := PackedVector2Array([pickup.position + Vector2(0, -22), pickup.position + Vector2(22, 0), pickup.position + Vector2(0, 22), pickup.position + Vector2(-22, 0)])
+        var pickup_position: Vector2 = pickup.position + Vector2(0, sin(elapsed * 3.2 + pickup.position.x * 0.01) * 5.0)
+        var pickup_angle: float = elapsed * 0.7 + pickup.position.y * 0.002
+        draw_circle(pickup_position, 34.0 + sin(elapsed * 4.0) * 5.0, Color(data.color, 0.15))
+        var pickup_shape := Transform2D(pickup_angle, pickup_position)
+        var diamond := PackedVector2Array([pickup_shape * Vector2(0, -22), pickup_shape * Vector2(22, 0), pickup_shape * Vector2(0, 22), pickup_shape * Vector2(-22, 0)])
         draw_colored_polygon(diamond, Color("18253a")); draw_polyline(PackedVector2Array([diamond[0], diamond[1], diamond[2], diamond[3], diamond[0]]), data.color, 3.0)
         if WEAPONS.has(pickup.name):
             if data.family == "MELEE" and data.style == "blade":
-                draw_sword(pickup.position, -PI * 0.5, 24.0, data.color)
+                draw_sword(pickup_position, pickup_angle - PI * 0.5, 24.0, data.color)
             elif data.family == "MELEE" and data.style == "nova":
-                draw_arc(pickup.position, 13.0, 0, TAU, 18, data.color, 3.0); draw_circle(pickup.position, 4.0, data.color)
+                draw_arc(pickup_position, 13.0, pickup_angle, pickup_angle + TAU, 18, data.color, 3.0); draw_circle(pickup_position, 4.0, data.color)
             elif data.family == "MELEE" and data.style == "chain":
-                draw_line(pickup.position + Vector2(-14, 0), pickup.position + Vector2(14, 0), data.color, 3.0); draw_circle(pickup.position + Vector2(-8, 0), 4.0, Color("f2f0d0")); draw_circle(pickup.position + Vector2(8, 0), 5.0, Color("f2f0d0"))
-        draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-55, 42), pickup.name, HORIZONTAL_ALIGNMENT_CENTER, 110, 10, Color("edf2e9")); draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-55, 56), pickup.family, HORIZONTAL_ALIGNMENT_CENTER, 110, 8, data.color)
+                draw_line(pickup_position + Vector2(-14, 0).rotated(pickup_angle), pickup_position + Vector2(14, 0).rotated(pickup_angle), data.color, 3.0); draw_circle(pickup_position + Vector2(-8, 0).rotated(pickup_angle), 4.0, Color("f2f0d0")); draw_circle(pickup_position + Vector2(8, 0).rotated(pickup_angle), 5.0, Color("f2f0d0"))
+        draw_string(ThemeDB.fallback_font, pickup_position + Vector2(-55, 42), pickup.name, HORIZONTAL_ALIGNMENT_CENTER, 110, 10, Color("edf2e9")); draw_string(ThemeDB.fallback_font, pickup_position + Vector2(-55, 56), pickup.family, HORIZONTAL_ALIGNMENT_CENTER, 110, 8, data.color)
         if data.family == "MELEE":
-            draw_string(ThemeDB.fallback_font, pickup.position + Vector2(-75, 70), "%s  |  %s" % [data.strength, data.weakness], HORIZONTAL_ALIGNMENT_CENTER, 150, 7, Color("aebbb2"))
+            draw_string(ThemeDB.fallback_font, pickup_position + Vector2(-75, 70), "%s  |  %s" % [data.strength, data.weakness], HORIZONTAL_ALIGNMENT_CENTER, 150, 7, Color("aebbb2"))
     for projectile in projectiles:
         if projectile.impact:
             draw_circle(projectile.position, projectile.radius + 8.0, Color(projectile.color, .18)); draw_arc(projectile.position, projectile.radius, 0, TAU, 24, projectile.color, 4.0)

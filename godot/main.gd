@@ -374,7 +374,8 @@ func fire_weapon(id: String, target: Dictionary) -> void:
                     hit *= 1.25 if dist > reach * 0.7 else 0.9
                     enemy.poison = max(enemy.poison, 1.0)
                 enemy.health -= hit
-                damage_numbers.append({"position": enemy.position + Vector2(0, -enemy.radius - 8.0), "amount": int(hit), "color": data.color, "life": 0.55})
+                var damage_color: Color = Color("fff0a8") if data.kind == "nova" and dist < reach * 0.75 else data.color
+                damage_numbers.append({"position": enemy.position + Vector2(0, -enemy.radius - 8.0), "amount": int(hit), "color": damage_color, "life": 0.55})
                 enemy.hit_flash = 0.14
                 var recoil: float = 10.0 if data.kind == "blade" else 18.0 if data.kind == "nova" else 7.0
                 enemy.position += relative.normalized() * recoil

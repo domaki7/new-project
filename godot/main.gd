@@ -822,10 +822,18 @@ func _draw() -> void:
         draw_monster(enemy, MONSTERS[enemy.type])
     if mode == "play" and not enemies.is_empty() and not equipped.is_empty():
         var target: Dictionary = nearest_enemy()
-        var target_pulse: float = 12.0 + sin(elapsed * 6.0) * 2.0
-        draw_arc(target.position, target.radius + target_pulse, elapsed * 1.5, elapsed * 1.5 + PI * 0.8, 12, Color(1.0, 0.88, 0.45, 0.42), 2.0)
-        draw_line(target.position + Vector2(-target.radius - 7.0, 0), target.position + Vector2(-target.radius - 2.0, 0), Color(1.0, 0.88, 0.45, 0.7), 2.0)
-        draw_line(target.position + Vector2(target.radius + 2.0, 0), target.position + Vector2(target.radius + 7.0, 0), Color(1.0, 0.88, 0.45, 0.7), 2.0)
+        var target_reachable := false
+        for weapon in equipped:
+            var weapon_data: Dictionary = WEAPONS[weapon]
+            if weapon_data.family == "MELEE" and player.position.distance_to(target.position) <= float(weapon_data.get("reach", 0.0)):
+                target_reachable = true
+            elif weapon_data.family == "RANGED":
+                target_reachable = true
+        if target_reachable:
+            var target_pulse: float = 12.0 + sin(elapsed * 6.0) * 2.0
+            draw_arc(target.position, target.radius + target_pulse, elapsed * 1.5, elapsed * 1.5 + PI * 0.8, 12, Color(1.0, 0.88, 0.45, 0.42), 2.0)
+            draw_line(target.position + Vector2(-target.radius - 7.0, 0), target.position + Vector2(-target.radius - 2.0, 0), Color(1.0, 0.88, 0.45, 0.7), 2.0)
+            draw_line(target.position + Vector2(target.radius + 2.0, 0), target.position + Vector2(target.radius + 7.0, 0), Color(1.0, 0.88, 0.45, 0.7), 2.0)
     for impact in melee_impacts:
         draw_melee_impact(impact)
     for burst in enemy_bursts:

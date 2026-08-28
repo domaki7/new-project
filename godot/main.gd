@@ -59,6 +59,7 @@ var blade_flash := 0.0
 var player_hit_flash := 0.0
 var screen_shake := 0.0
 var hit_stop := 0.0
+var ascension_flash := 0.0
 var dash_cooldown := 0.0
 var dash_requested := false
 var dash_flash := 0.0
@@ -136,6 +137,7 @@ func _process(delta: float) -> void:
     screen_shake = max(0.0, screen_shake - delta * 4.5)
     dash_cooldown = max(0.0, dash_cooldown - delta)
     dash_flash = max(0.0, dash_flash - delta)
+    ascension_flash = max(0.0, ascension_flash - delta)
     for trail in dash_trail: trail.life = max(0.0, float(trail.life) - delta)
     dash_trail = dash_trail.filter(func(trail: Dictionary) -> bool: return trail.life > 0.0)
     if mode == "play" and dash_flash > 0.0: dash_trail.append({"position": player.position, "life": 0.16})
@@ -447,6 +449,7 @@ func update_enemies(delta: float) -> void:
 func open_ascension() -> void:
     mode = "ascension"
     essence -= 240
+    ascension_flash = 0.45
     ascension_options.clear()
     var candidates: Array[String] = []
     for id in WEAPONS:
@@ -816,7 +819,7 @@ func _draw() -> void:
         draw_knight()
         for index in equipped.size(): draw_equipped_weapon(equipped[index], index, equipped.size())
     if mode == "start": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .78)); draw_string(ThemeDB.fallback_font, Vector2(390, 315), "CROWN OF THE ABSOLUTE", HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(430, 355), "MOVE  /  COLLECT RELICS  /  ASCEND", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("63d1c2")); draw_string(ThemeDB.fallback_font, Vector2(470, 410), "CLICK TO ENTER  ·  R TO RESTART", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("aebbb2"))
-    if mode == "ascension": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(410, 155), "CONNECTED ASCENSION WEB", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(470, 190), "%s PATH  ·  CHOOSE ONE CONNECTED NODE" % weapon_family, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("63d1c2")); for index in ascension_positions.size(): var position: Vector2 = ascension_positions[index]; if index < ascension_options.size(): draw_line(Vector2(640, 245), position, Color(0.38, 0.5, 0.55, .7), 2.0); var id: String = ascension_options[index]; var data: Dictionary = WEAPONS[id] if WEAPONS.has(id) else UPGRADES[id]; draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), Color("182d46")); draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), data.color, false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, -8), id, HORIZONTAL_ALIGNMENT_LEFT, 164, 13, data.color); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 16), data.get("text", "weapon node"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2"))
+    if mode == "ascension": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); if ascension_flash > 0.0: draw_circle(Vector2(640, 245), 120.0 - ascension_flash * 90.0, Color(0.39, 0.82, 0.76, ascension_flash * 0.12)); draw_string(ThemeDB.fallback_font, Vector2(410, 155), "CONNECTED ASCENSION WEB", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(470, 190), "%s PATH  ·  CHOOSE ONE CONNECTED NODE" % weapon_family, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("63d1c2")); for index in ascension_positions.size(): var position: Vector2 = ascension_positions[index]; if index < ascension_options.size(): draw_line(Vector2(640, 245), position, Color(0.38, 0.5, 0.55, .7), 2.0); var id: String = ascension_options[index]; var data: Dictionary = WEAPONS[id] if WEAPONS.has(id) else UPGRADES[id]; draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), Color("182d46")); draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), data.color, false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, -8), id, HORIZONTAL_ALIGNMENT_LEFT, 164, 13, data.color); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 16), data.get("text", "weapon node"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2"))
     if mode == "death": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(455, 220), "VESSEL LOST", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color("ed725c")); draw_string(ThemeDB.fallback_font, Vector2(455, 260), "%d CROWN COINS  ·  PRESS R TO RETURN" % crown_coins, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("edc968")); draw_string(ThemeDB.fallback_font, Vector2(455, 300), "WAVE %02d  ·  %d KILLS  ·  %d ESSENCE  ·  +%d COINS" % [wave, run_kills, essence, run_coins_earned], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aebbb2")); var shop_names := ["CROWN EDGE · 30", "THRONE OF IRON · 35", "SOVEREIGN GRASP · 25"]; for index in 3: var position := Vector2(505 + index * 215, 465); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("182d46")); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("edc968"), false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 5), shop_names[index], HORIZONTAL_ALIGNMENT_LEFT, 164, 11, Color("f2f0d0"))
     if mode == "victory": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(410, 220), "REGENT DEFEATED", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color("63d1c2")); draw_string(ThemeDB.fallback_font, Vector2(410, 265), "THE CROWN ENDURES  ·  50 BONUS CROWN COINS", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("edc968")); draw_string(ThemeDB.fallback_font, Vector2(410, 305), "WAVE %02d  ·  %d KILLS  ·  %d ESSENCE" % [wave, run_kills, essence], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aebbb2")); draw_string(ThemeDB.fallback_font, Vector2(470, 360), "PRESS R TO BEGIN A NEW ASCENSION", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aebbb2"))
     draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

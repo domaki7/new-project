@@ -259,6 +259,10 @@ func spawn_pickup() -> void:
 func collect_pickups() -> void:
     for pickup in pickups.duplicate():
         pickup.life -= get_process_delta_time()
+        var pickup_distance: float = player.position.distance_to(pickup.position)
+        var magnet_radius: float = 110.0 + meta_range * 12.0
+        if pickup_distance < magnet_radius and pickup_distance > 42.0:
+            pickup.position = pickup.position.move_toward(player.position, (180.0 + meta_range * 20.0) * get_process_delta_time())
         if player.position.distance_to(pickup.position) < 40.0 + meta_range * 12.0:
             var id: String = pickup.name
             if WEAPONS.has(id):

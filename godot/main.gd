@@ -283,7 +283,7 @@ func spawn_enemy() -> void:
     elif roll < 0.78: type = "ORACLE"
     var data: Dictionary = MONSTERS[type]
     var health: float = data.health + wave * 14.0
-    enemies.append({"position": position, "type": type, "radius": data.radius, "health": health, "max_health": health, "speed": data.speed + wave * 4.0, "velocity": Vector2.ZERO, "damage": data.damage, "essence": data.essence, "shot_timer": 1.5, "poison": 0.0, "slow": 0.0, "hit_flash": 0.0})
+    enemies.append({"position": position, "type": type, "health": health, "max_health": health, "radius": data.radius, "speed": data.speed + wave * 4.0, "velocity": Vector2.ZERO, "damage": data.damage, "essence": data.essence, "shot_timer": 1.5, "poison": 0.0, "slow": 0.0, "hit_flash": 0.0})
 
 func spawn_pickup() -> void:
     var options: Array[String] = []
@@ -404,6 +404,13 @@ func nearest_enemy() -> Dictionary:
 func update_projectiles(delta: float) -> void:
     for projectile in projectiles.duplicate():
         projectile.life -= delta
+        if projectile.get("hostile", false):
+            projectile.position += projectile.velocity * delta
+            if projectile.position.distance_to(player.position) < projectile.radius + 16.0:
+                damage_player(projectile.damage)
+                projectile.life = 0.0
+            if projectile.life <= 0.0: projectiles.erase(projectile)
+            continue
         if projectile.impact:
             for enemy in enemies:
                 if enemy.position.distance_to(projectile.position) < projectile.radius: enemy.health -= projectile.damage * delta * 3.0
@@ -440,6 +447,12 @@ func update_enemies(delta: float) -> void:
         var enemy_steering: float = 520.0 if enemy.slow <= 0.0 else 260.0
         enemy.velocity = enemy.velocity.move_toward(enemy_target_velocity, enemy_steering * delta)
         enemy.position += enemy.velocity * delta
+        if enemy.type == "ORACLE":
+            enemy.shot_timer -= delta
+            if enemy.shot_timer <= 0.0 and enemy.position.distance_to(player.position) < 520.0:
+                var shot_direction: Vector2 = (player.position - enemy.position).normalized()
+                projectiles.append({"position": enemy.position, "velocity": shot_direction * 210.0, "life": 3.0, "radius": 9.0, "damage": enemy.damage * 0.8, "color": Color("9fd6ff"), "kind": "oracle", "impact": false, "hostile": true})
+                enemy.shot_timer = 2.4
         if enemy.position.distance_to(player.position) < enemy.radius + 17.0: damage_player(enemy.damage * delta)
         if enemy.health <= 0.0:
             essence += enemy.essence
@@ -816,6 +829,8 @@ func _draw() -> void:
             draw_colored_polygon(shard, projectile.color); draw_polyline(PackedVector2Array([shard[0], shard[1], shard[2], shard[3], shard[0]]), Color("ffffff"), 2.0)
         elif projectile.kind == "venom":
             draw_circle(projectile.position, projectile.radius + 5.0, Color(projectile.color, .18)); draw_circle(projectile.position, projectile.radius, projectile.color); draw_arc(projectile.position, projectile.radius, 0, TAU, 16, Color("d9ffb7"), 2.0)
+        elif projectile.kind == "oracle":
+            draw_circle(projectile.position, projectile.radius + 6.0, Color(projectile.color, .14)); draw_circle(projectile.position, projectile.radius, Color("182d46")); draw_arc(projectile.position, projectile.radius, elapsed * 3.0, elapsed * 3.0 + PI * 1.5, 16, projectile.color, 2.0); draw_circle(projectile.position, 3.0, Color("ffffff"))
         else:
             draw_line(projectile.position - projectile.velocity.normalized() * 14.0, projectile.position, projectile.color, 5.0); draw_circle(projectile.position, projectile.radius, projectile.color)
     for enemy in enemies:

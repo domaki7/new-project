@@ -60,6 +60,7 @@ var screen_shake := 0.0
 var dash_cooldown := 0.0
 var dash_requested := false
 var dash_flash := 0.0
+var dash_trail: Array[Dictionary] = []
 var mode := "start"
 var status := "UNARMED - COLLECT YOUR FIRST RELIC"
 var crown_coins := 0
@@ -130,6 +131,9 @@ func _process(delta: float) -> void:
     screen_shake = max(0.0, screen_shake - delta * 4.5)
     dash_cooldown = max(0.0, dash_cooldown - delta)
     dash_flash = max(0.0, dash_flash - delta)
+    for trail in dash_trail: trail.life = max(0.0, float(trail.life) - delta)
+    dash_trail = dash_trail.filter(func(trail: Dictionary) -> bool: return trail.life > 0.0)
+    if mode == "play" and dash_flash > 0.0: dash_trail.append({"position": player.position, "life": 0.16})
     for id in weapon_swings.keys(): weapon_swings[id] = max(0.0, float(weapon_swings[id]) - delta)
     for impact in melee_impacts: impact.life = max(0.0, float(impact.life) - delta)
     melee_impacts = melee_impacts.filter(func(impact: Dictionary) -> bool: return impact.life > 0.0)
@@ -199,7 +203,7 @@ func save_path_nodes() -> void:
 
 func start_game() -> void:
     mode = "play"
-    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
+    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
@@ -569,6 +573,9 @@ func draw_knight() -> void:
     draw_arc(position, 45.0, -PI * 0.5 + TAU * health_ratio, PI * 1.5, 28, Color(0.08, 0.12, 0.16, 0.75), 3.0)
     if dash_flash > 0.0:
         var dash_alpha: float = dash_flash / 0.16
+        for trail in dash_trail:
+            var trail_alpha: float = float(trail.life) / 0.16
+            draw_circle(trail.position, 24.0, Color(0.62, 0.84, 1.0, 0.08 * trail_alpha))
         draw_circle(position, 40.0 + (1.0 - dash_alpha) * 24.0, Color(0.62, 0.84, 1.0, 0.12 * dash_alpha))
         draw_arc(position, 38.0 + (1.0 - dash_alpha) * 24.0, 0, TAU, 24, Color(0.62, 0.84, 1.0, dash_alpha), 3.0)
     if invulnerable > 0.0:

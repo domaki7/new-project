@@ -58,6 +58,7 @@ var blade_angle := 0.0
 var blade_flash := 0.0
 var player_hit_flash := 0.0
 var screen_shake := 0.0
+var hit_stop := 0.0
 var dash_cooldown := 0.0
 var dash_requested := false
 var dash_flash := 0.0
@@ -127,7 +128,9 @@ func play_sfx(kind: String) -> void:
 
 func _process(delta: float) -> void:
     elapsed += delta
-    if mode == "play": update_game(delta)
+    if hit_stop > 0.0:
+        hit_stop = max(0.0, hit_stop - delta)
+    elif mode == "play": update_game(delta)
     blade_flash = max(0.0, blade_flash - delta)
     player_hit_flash = max(0.0, player_hit_flash - delta)
     screen_shake = max(0.0, screen_shake - delta * 4.5)
@@ -365,6 +368,7 @@ func fire_weapon(id: String, target: Dictionary) -> void:
                 var recoil: float = 10.0 if data.kind == "blade" else 18.0 if data.kind == "nova" else 7.0
                 enemy.position += relative.normalized() * recoil
                 screen_shake = max(screen_shake, 0.025 if data.kind == "blade" else 0.045 if data.kind == "nova" else 0.02)
+                hit_stop = max(hit_stop, 0.018 if data.kind == "blade" else 0.032 if data.kind == "nova" else 0.014)
                 melee_impacts.append({"position": enemy.position, "style": data.style, "color": data.color, "life": 0.22, "angle": angle})
     elif data.kind == "storm":
         for enemy in enemies:

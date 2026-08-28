@@ -736,6 +736,12 @@ func _draw() -> void:
             draw_line(projectile.position - projectile.velocity.normalized() * 14.0, projectile.position, projectile.color, 5.0); draw_circle(projectile.position, projectile.radius, projectile.color)
     for enemy in enemies:
         draw_monster(enemy, MONSTERS[enemy.type])
+    if mode == "play" and not enemies.is_empty() and not equipped.is_empty():
+        var target: Dictionary = nearest_enemy()
+        var target_pulse: float = 12.0 + sin(elapsed * 6.0) * 2.0
+        draw_arc(target.position, target.radius + target_pulse, elapsed * 1.5, elapsed * 1.5 + PI * 0.8, 12, Color(1.0, 0.88, 0.45, 0.42), 2.0)
+        draw_line(target.position + Vector2(-target.radius - 7.0, 0), target.position + Vector2(-target.radius - 2.0, 0), Color(1.0, 0.88, 0.45, 0.7), 2.0)
+        draw_line(target.position + Vector2(target.radius + 2.0, 0), target.position + Vector2(target.radius + 7.0, 0), Color(1.0, 0.88, 0.45, 0.7), 2.0)
     for impact in melee_impacts:
         draw_melee_impact(impact)
     for burst in enemy_bursts:

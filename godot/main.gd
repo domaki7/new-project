@@ -119,6 +119,8 @@ func play_sfx(kind: String) -> void:
     elif kind == "victory": frequency = 440.0; duration = 0.45; volume = 0.16
     elif kind == "impact": frequency = 360.0; duration = 0.06; volume = 0.08
     elif kind == "dash": frequency = 260.0; duration = 0.1; volume = 0.12
+    elif kind == "wave": frequency = 150.0; duration = 0.22; volume = 0.12
+    elif kind == "ascension": frequency = 520.0; duration = 0.28; volume = 0.14
     var frame_count: int = int(44100.0 * duration)
     for frame in frame_count:
         var time: float = float(frame) / 44100.0
@@ -254,6 +256,7 @@ func update_game(delta: float) -> void:
         wave = min(5, wave + 1)
         if wave > previous_wave:
             status = "WAVE %02d REACHED - THREATS ESCALATING" % wave
+            play_sfx("wave")
     player.health = min(player.max_health, player.health + float(meta_health) * 0.02 * delta)
 
 func spawn_enemy() -> void:
@@ -450,6 +453,7 @@ func open_ascension() -> void:
     mode = "ascension"
     essence -= 240
     ascension_flash = 0.45
+    play_sfx("ascension")
     ascension_options.clear()
     var candidates: Array[String] = []
     for id in WEAPONS:

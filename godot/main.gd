@@ -126,6 +126,8 @@ func play_sfx(kind: String) -> void:
     elif kind == "wave": frequency = 150.0; duration = 0.22; volume = 0.12
     elif kind == "ascension": frequency = 520.0; duration = 0.28; volume = 0.14
     elif kind == "oracle": frequency = 180.0; duration = 0.16; volume = 0.11
+    elif kind == "ui_hover": frequency = 540.0; duration = 0.08; volume = 0.08
+    elif kind == "ui_select": frequency = 680.0; duration = 0.12; volume = 0.12
     var frame_count: int = int(44100.0 * duration)
     for frame in frame_count:
         var time: float = float(frame) / 44100.0
@@ -533,16 +535,28 @@ func die() -> void:
 
 func _input(event: InputEvent) -> void:
     if event is InputEventMouseMotion: mouse_position = event.position
-    if event is InputEventKey and event.pressed and event.keycode == KEY_R: start_game()
+    if event is InputEventKey and event.pressed and event.keycode == KEY_R:
+        play_sfx("ui_select")
+        start_game()
     if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE and mode == "play": dash_requested = true
-    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "start": start_game()
+    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "start":
+        play_sfx("ui_select")
+        start_game()
     if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "ascension":
         for index in ascension_positions.size():
-            if Rect2(ascension_positions[index] - Vector2(100, 44), Vector2(200, 88)).has_point(event.position): choose_ascension(index)
+            if Rect2(ascension_positions[index] - Vector2(100, 44), Vector2(200, 88)).has_point(event.position):
+                play_sfx("ui_select")
+                choose_ascension(index)
     if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "death":
-        if Rect2(Vector2(280, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position): buy_meta("damage", 30)
-        elif Rect2(Vector2(640, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position): buy_meta("health", 35)
-        elif Rect2(Vector2(1000, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position): buy_meta("range", 25)
+        if Rect2(Vector2(280, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position):
+            play_sfx("ui_select")
+            buy_meta("damage", 30)
+        elif Rect2(Vector2(640, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position):
+            play_sfx("ui_select")
+            buy_meta("health", 35)
+        elif Rect2(Vector2(1000, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position):
+            play_sfx("ui_select")
+            buy_meta("range", 25)
 
 func buy_meta(kind: String, cost: int) -> void:
     if crown_coins < cost: return

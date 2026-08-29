@@ -585,8 +585,10 @@ func _input(event: InputEvent) -> void:
                 play_sfx("ui_select")
                 buy_meta(shop_kinds[menu_selection], shop_costs[menu_selection])
     if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "start" and menu_transition < 0.1:
-        play_sfx("ui_select")
-        start_game()
+        var start_button := Rect2(Vector2(520, 406), Vector2(240, 48))
+        if start_button.has_point(event.position):
+            play_sfx("ui_select")
+            start_game()
     if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "ascension" and menu_transition < 0.1:
         for index in ascension_positions.size():
             if Rect2(ascension_positions[index] - Vector2(100, 44), Vector2(200, 88)).has_point(event.position):

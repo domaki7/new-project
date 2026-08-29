@@ -1012,6 +1012,7 @@ func _draw() -> void:
     if player:
         draw_knight()
         for index in equipped.size(): draw_equipped_weapon(equipped[index], index, equipped.size())
+    draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
     if mode == "start":
         draw_menu_backdrop(Color("63d1c2"))
         var pulse: float = sin(elapsed * 2.0) * 0.15 + 0.85

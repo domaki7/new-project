@@ -68,6 +68,10 @@ var dash_cooldown := 0.0
 var dash_requested := false
 var dash_flash := 0.0
 var dash_trail: Array[Dictionary] = []
+var run_damage_multiplier := 1.0
+var cooldown_multiplier := 1.0
+var critical_chance := 0.0
+var vitality_regen := 0.0
 var mode := "start"
 var mouse_position := Vector2.ZERO
 var menu_transition := 0.0
@@ -242,6 +246,10 @@ func start_game() -> void:
     menu_transition = 0.0
     menu_selection = 0
     menu_hover_target = ""
+    run_damage_multiplier = 1.0
+    cooldown_multiplier = 1.0
+    critical_chance = 0.0
+    vitality_regen = 0.0
     level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); damage_numbers.clear(); spawn_ripples.clear(); death_debris.clear(); dash_shockwaves.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
@@ -292,7 +300,7 @@ func update_game(delta: float) -> void:
         if wave > previous_wave:
             status = "WAVE %02d REACHED - THREATS ESCALATING" % wave
             play_sfx("wave")
-    player.health = min(player.max_health, player.health + float(meta_health) * 0.02 * delta)
+    player.health = min(player.max_health, player.health + (float(meta_health) * 0.02 + vitality_regen) * delta)
 
 func spawn_enemy() -> void:
     var side := randi() % 4
@@ -362,13 +370,13 @@ func collect_pickups() -> void:
     pickups = pickups.filter(func(item: Dictionary) -> bool: return item.life > 0.0)
 
 func apply_upgrade(id: String) -> void:
-    if id == "WAR BLESSING": meta_damage += 1
-    elif id == "QUICKENED RITE": pass
+    if id == "WAR BLESSING": run_damage_multiplier *= 1.25
+    elif id == "QUICKENED RITE": cooldown_multiplier *= 0.82
     elif id == "IRON SOUL": player.max_health += 35.0; player.health = player.max_health
     elif id == "GRAVITY HAND": meta_range += 1
-    elif id == "ARSENAL MASTERY": meta_damage += 1
-    elif id == "EXECUTIONER RITE": pass
-    elif id == "BLOOD OF STARS": pass
+    elif id == "ARSENAL MASTERY": run_damage_multiplier *= 1.18
+    elif id == "EXECUTIONER RITE": critical_chance += 0.15
+    elif id == "BLOOD OF STARS": vitality_regen += 2.0
     elif id == "CROWNWARD": invulnerable += 0.35
 
 func auto_cast(delta: float) -> void:
@@ -380,8 +388,11 @@ func auto_cast(delta: float) -> void:
             fire_weapon(weapon, target)
 
 func fire_weapon(id: String, target: Dictionary) -> void:
-    var data: Dictionary = WEAPONS[id]; weapon_cooldowns[id] = data.cooldown
+    var data: Dictionary = WEAPONS[id]
+    weapon_cooldowns[id] = data.cooldown * cooldown_multiplier
     var power: float = weapon_power(id)
+    var critical_hit: bool = randf() < critical_chance
+    if critical_hit: power *= 1.8
     var angle: float = player.position.angle_to_point(target.position)
     if data.kind in ["blade", "nova", "chain"]:
         play_sfx(data.kind)
@@ -407,7 +418,7 @@ func fire_weapon(id: String, target: Dictionary) -> void:
                     hit *= 1.25 if dist > reach * 0.7 else 0.9
                     enemy.poison = max(enemy.poison, 1.0)
                 enemy.health -= hit
-                var damage_color: Color = Color("fff0a8") if data.kind == "nova" and dist < reach * 0.75 else data.color
+                var damage_color: Color = Color("fff0a8") if critical_hit or data.kind == "nova" and dist < reach * 0.75 else data.color
                 damage_numbers.append({"position": enemy.position + Vector2(0, -enemy.radius - 8.0), "amount": int(hit), "color": damage_color, "life": 0.55})
                 enemy.hit_flash = 0.14
                 var recoil: float = 10.0 if data.kind == "blade" else 18.0 if data.kind == "nova" else 7.0
@@ -427,8 +438,7 @@ func fire_weapon(id: String, target: Dictionary) -> void:
 
 func weapon_power(id: String) -> float:
     var rank: int = int(weapon_ranks.get(id, 1))
-    var mastery: float = 1.18 if unlocked_nodes.has("ARSENAL MASTERY") else 1.0
-    return (22.0 + meta_damage * 5.0) * mastery * pow(float(rank), 0.35)
+    return (22.0 + meta_damage * 5.0) * run_damage_multiplier * pow(float(rank), 0.35)
 
 func nearest_enemy() -> Dictionary:
     var nearest: Dictionary = enemies[0]
@@ -1067,8 +1077,8 @@ func _draw() -> void:
         var transition_scale: float = 1.0 - menu_transition * 0.15
         var transition_alpha: float = 1.0 - menu_transition * 0.2
         if ascension_flash > 0.0: draw_circle(Vector2(640, 245), 120.0 - ascension_flash * 90.0, Color(0.39, 0.82, 0.76, ascension_flash * 0.12))
-        draw_string(ThemeDB.fallback_font, Vector2(640, 120), "CONNECTED ASCENSION WEB", HORIZONTAL_ALIGNMENT_CENTER, -1, int(32.0 * transition_scale), Color("f2f0d0", transition_alpha))
-        draw_string(ThemeDB.fallback_font, Vector2(640, 160), "%s PATH  ·  CHOOSE ONE CONNECTED NODE" % weapon_family, HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color("63d1c2", transition_alpha * 0.9))
+        draw_string(ThemeDB.fallback_font, Vector2(0, 120), "CONNECTED ASCENSION WEB", HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), int(32.0 * transition_scale), Color("f2f0d0", transition_alpha))
+        draw_string(ThemeDB.fallback_font, Vector2(0, 160), "%s PATH  ·  CHOOSE ONE CONNECTED NODE" % weapon_family, HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), 14, Color("63d1c2", transition_alpha * 0.9))
         for index in ascension_positions.size():
             var position: Vector2 = ascension_positions[index]
             if index < ascension_options.size():
@@ -1079,15 +1089,18 @@ func _draw() -> void:
                 draw_line(Vector2(640, 245), card_position, Color(0.38, 0.5, 0.55, line_alpha), 2.0)
                 var id: String = ascension_options[index]
                 var data: Dictionary = WEAPONS[id] if WEAPONS.has(id) else UPGRADES[id]
+                var option_kind: String = "WEAPON" if WEAPONS.has(id) else "ASCENSION RITE"
                 var option_rect := Rect2(card_position - Vector2(100, 44), Vector2(200, 88))
                 var option_hover: bool = option_rect.has_point(mouse_position) and menu_transition < 0.1
                 var option_focused: bool = index == menu_selection and menu_transition < 0.1
                 draw_rect(option_rect.grow(5), Color(data.color, 0.05 * card_progress))
                 draw_rect(option_rect, Color("182d46", 0.5 * transition_alpha * card_progress))
+                draw_rect(Rect2(option_rect.position, Vector2(4, option_rect.size.y)), Color(data.color, transition_alpha * card_progress))
                 draw_rect(option_rect, data.color * Color(1, 1, 1, transition_alpha * (0.9 if option_hover or option_focused else 0.6)), false, 2.0 if option_hover or option_focused else 1.0)
                 if option_hover or option_focused: draw_circle(card_position, 120.0, Color(data.color, 0.05 * transition_alpha))
-                draw_string(ThemeDB.fallback_font, card_position + Vector2(-82, -12), id, HORIZONTAL_ALIGNMENT_LEFT, 164, int(13.0 * transition_scale), Color(data.color, transition_alpha * card_progress))
-                draw_string(ThemeDB.fallback_font, card_position + Vector2(-82, 8), data.get("text", "upgrade"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2", transition_alpha * card_progress * 0.8))
+                draw_string(ThemeDB.fallback_font, card_position + Vector2(-82, -23), option_kind, HORIZONTAL_ALIGNMENT_LEFT, 164, 8, Color("aebbb2", transition_alpha * card_progress * 0.75))
+                draw_string(ThemeDB.fallback_font, card_position + Vector2(-82, -5), id, HORIZONTAL_ALIGNMENT_LEFT, 164, int(13.0 * transition_scale), Color(data.color, transition_alpha * card_progress))
+                draw_string(ThemeDB.fallback_font, card_position + Vector2(-82, 15), data.get("text", "upgrade"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2", transition_alpha * card_progress * 0.8))
     if mode == "death":
         draw_menu_backdrop(Color("ed725c"))
         var pulse: float = sin(elapsed * 1.5) * 0.1 + 0.9

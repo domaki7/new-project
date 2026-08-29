@@ -122,6 +122,7 @@ func play_sfx(kind: String) -> void:
     elif kind == "dash": frequency = 260.0; duration = 0.1; volume = 0.12
     elif kind == "wave": frequency = 150.0; duration = 0.22; volume = 0.12
     elif kind == "ascension": frequency = 520.0; duration = 0.28; volume = 0.14
+    elif kind == "oracle": frequency = 180.0; duration = 0.16; volume = 0.11
     var frame_count: int = int(44100.0 * duration)
     for frame in frame_count:
         var time: float = float(frame) / 44100.0
@@ -408,6 +409,7 @@ func update_projectiles(delta: float) -> void:
             projectile.position += projectile.velocity * delta
             if projectile.position.distance_to(player.position) < projectile.radius + 16.0:
                 damage_player(projectile.damage)
+                projectile_impacts.append({"position": projectile.position, "color": projectile.color, "life": 0.14})
                 projectile.life = 0.0
             if projectile.life <= 0.0: projectiles.erase(projectile)
             continue
@@ -452,6 +454,7 @@ func update_enemies(delta: float) -> void:
             if enemy.shot_timer <= 0.0 and enemy.position.distance_to(player.position) < 520.0:
                 var shot_direction: Vector2 = (player.position - enemy.position).normalized()
                 projectiles.append({"position": enemy.position, "velocity": shot_direction * 210.0, "life": 3.0, "radius": 9.0, "damage": enemy.damage * 0.8, "color": Color("9fd6ff"), "kind": "oracle", "impact": false, "hostile": true})
+                play_sfx("oracle")
                 enemy.shot_timer = 2.4
         if enemy.position.distance_to(player.position) < enemy.radius + 17.0: damage_player(enemy.damage * delta)
         if enemy.health <= 0.0:

@@ -259,6 +259,11 @@ func load_path_nodes() -> void:
     var config := ConfigFile.new()
     if config.load(meta_file) == OK:
         for node in config.get_value("paths", weapon_family, []): unlocked_nodes[node] = true
+    for id in unlocked_nodes:
+        if WEAPONS.has(id) and WEAPONS[id].family == weapon_family and not equipped.has(id) and equipped.size() < MAX_WEAPONS:
+            equipped.append(id)
+            weapon_ranks[id] = max(1, int(weapon_ranks.get(id, 0)))
+            weapon_cooldowns[id] = 0.0
     refresh_upgrade_effects()
 
 func refresh_upgrade_effects() -> void:

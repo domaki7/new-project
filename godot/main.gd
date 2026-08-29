@@ -72,6 +72,7 @@ var run_damage_multiplier := 1.0
 var cooldown_multiplier := 1.0
 var critical_chance := 0.0
 var vitality_regen := 0.0
+var run_pickup_range := 0.0
 var mode := "start"
 var mouse_position := Vector2.ZERO
 var menu_transition := 0.0
@@ -194,6 +195,7 @@ func setup_hud() -> void:
     hud_labels["title"] = make_label(layer, Vector2(44, 31), "CROWN OF THE ABSOLUTE", 24, Color("f2f0d0"))
     hud_labels["stats"] = make_label(layer, Vector2(650, 32), "", 14, Color("edc968"))
     hud_labels["status"] = make_label(layer, Vector2(44, 122), "", 13, Color("63d1c2"))
+    hud_labels["rites"] = make_label(layer, Vector2(44, 650), "", 12, Color("63d1c2"))
     hud_labels["build"] = make_label(layer, Vector2(44, 675), "", 13, Color("aebbb2"))
     hud_labels["help"] = make_label(layer, Vector2(875, 675), "WASD / ARROWS  ·  SPACE DASH  ·  R RESTART", 12, Color("879b9b"))
 
@@ -211,6 +213,13 @@ func update_hud() -> void:
     var dash_text: String = "DASH READY" if dash_cooldown <= 0.0 else "DASH %.1fs" % dash_cooldown
     hud_labels["stats"].text = "VESSEL %02d     ESSENCE %03d     WAVE %02d / 05     VITALITY %03d     %s" % [level, essence, wave, max(0, int(player.health)), dash_text]
     hud_labels["status"].text = status
+    var rites: Array[String] = []
+    if run_damage_multiplier > 1.0: rites.append("DMG x%.2f" % run_damage_multiplier)
+    if cooldown_multiplier < 1.0: rites.append("HASTE %d%%" % int((1.0 - cooldown_multiplier) * 100.0))
+    if critical_chance > 0.0: rites.append("CRIT %d%%" % int(critical_chance * 100.0))
+    if vitality_regen > 0.0: rites.append("REGEN +%.0f" % vitality_regen)
+    if run_pickup_range > 0.0: rites.append("RANGE +%.0f" % run_pickup_range)
+    hud_labels["rites"].text = "ACTIVE RITES: %s" % ("  ·  ".join(rites) if not rites.is_empty() else "NONE")
     hud_labels["build"].text = "PATH: %s     ACTIVE WEAPONS: %s / %d     %s" % [weapon_family if not weapon_family.is_empty() else "UNARMED", ", ".join(equipped) if not equipped.is_empty() else "NONE", MAX_WEAPONS, "CROWN COINS: %d" % crown_coins]
 
 func load_meta() -> void:
@@ -233,6 +242,16 @@ func load_path_nodes() -> void:
     var config := ConfigFile.new()
     if config.load(meta_file) == OK:
         for node in config.get_value("paths", weapon_family, []): unlocked_nodes[node] = true
+    refresh_upgrade_effects()
+
+func refresh_upgrade_effects() -> void:
+    run_damage_multiplier = 1.0
+    cooldown_multiplier = 1.0
+    critical_chance = 0.0
+    vitality_regen = 0.0
+    run_pickup_range = 0.0
+    for id in unlocked_nodes:
+        if UPGRADES.has(id): apply_upgrade(id)
 
 func save_path_nodes() -> void:
     if weapon_family.is_empty(): return
@@ -250,6 +269,7 @@ func start_game() -> void:
     cooldown_multiplier = 1.0
     critical_chance = 0.0
     vitality_regen = 0.0
+    run_pickup_range = 0.0
     level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); damage_numbers.clear(); spawn_ripples.clear(); death_debris.clear(); dash_shockwaves.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
@@ -340,7 +360,7 @@ func collect_pickups() -> void:
     for pickup in pickups.duplicate():
         pickup.life -= get_process_delta_time()
         var pickup_distance: float = player.position.distance_to(pickup.position)
-        var magnet_radius: float = 110.0 + meta_range * 12.0
+        var magnet_radius: float = 110.0 + meta_range * 12.0 + run_pickup_range
         if pickup_distance < magnet_radius and pickup_distance > 42.0:
             pickup.position = pickup.position.move_toward(player.position, (180.0 + meta_range * 20.0) * get_process_delta_time())
         if player.position.distance_to(pickup.position) < 40.0 + meta_range * 12.0:
@@ -373,7 +393,7 @@ func apply_upgrade(id: String) -> void:
     if id == "WAR BLESSING": run_damage_multiplier *= 1.25
     elif id == "QUICKENED RITE": cooldown_multiplier *= 0.82
     elif id == "IRON SOUL": player.max_health += 35.0; player.health = player.max_health
-    elif id == "GRAVITY HAND": meta_range += 1
+    elif id == "GRAVITY HAND": run_pickup_range += 20.0
     elif id == "ARSENAL MASTERY": run_damage_multiplier *= 1.18
     elif id == "EXECUTIONER RITE": critical_chance += 0.15
     elif id == "BLOOD OF STARS": vitality_regen += 2.0

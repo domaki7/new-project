@@ -46,6 +46,7 @@ var enemy_bursts: Array[Dictionary] = []
 var projectile_impacts: Array[Dictionary] = []
 var damage_numbers: Array[Dictionary] = []
 var spawn_ripples: Array[Dictionary] = []
+var death_debris: Array[Dictionary] = []
 var unlocked_nodes := {}
 var weapon_family := ""
 var level := 1
@@ -67,6 +68,7 @@ var dash_requested := false
 var dash_flash := 0.0
 var dash_trail: Array[Dictionary] = []
 var mode := "start"
+var mouse_position := Vector2.ZERO
 var status := "UNARMED - COLLECT YOUR FIRST RELIC"
 var crown_coins := 0
 var run_kills := 0
@@ -159,6 +161,10 @@ func _process(delta: float) -> void:
     damage_numbers = damage_numbers.filter(func(number: Dictionary) -> bool: return number.life > 0.0)
     for ripple in spawn_ripples: ripple.life = max(0.0, float(ripple.life) - delta)
     spawn_ripples = spawn_ripples.filter(func(ripple: Dictionary) -> bool: return ripple.life > 0.0)
+    for debris in death_debris:
+        debris.life = max(0.0, float(debris.life) - delta)
+        debris.position += debris.velocity * delta
+    death_debris = death_debris.filter(func(debris: Dictionary) -> bool: return debris.life > 0.0)
     invulnerable = max(0.0, invulnerable - delta)
     update_hud()
     queue_redraw()
@@ -223,7 +229,7 @@ func save_path_nodes() -> void:
 
 func start_game() -> void:
     mode = "play"
-    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); damage_numbers.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
+    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); damage_numbers.clear(); spawn_ripples.clear(); death_debris.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
@@ -469,6 +475,10 @@ func update_enemies(delta: float) -> void:
             run_kills += 1
             play_sfx("defeat")
             enemy_bursts.append({"position": enemy.position, "color": MONSTERS[enemy.type].color, "radius": enemy.radius, "life": 0.32})
+            for scatter_index in range(8):
+                var scatter_angle: float = TAU * float(scatter_index) / 8.0
+                var scatter_velocity: float = 180.0 + randf_range(-40.0, 40.0)
+                death_debris.append({"position": enemy.position, "velocity": Vector2(cos(scatter_angle), sin(scatter_angle)) * scatter_velocity, "size": randf_range(2.0, 5.0), "color": MONSTERS[enemy.type].color, "life": 0.45})
             enemies.erase(enemy)
             if enemy.type == "DREAD REGENT":
                 mode = "victory"
@@ -522,6 +532,7 @@ func die() -> void:
     status = "VESSEL LOST - %d CROWN COINS" % crown_coins
 
 func _input(event: InputEvent) -> void:
+    if event is InputEventMouseMotion: mouse_position = event.position
     if event is InputEventKey and event.pressed and event.keycode == KEY_R: start_game()
     if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE and mode == "play": dash_requested = true
     if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "start": start_game()
@@ -529,9 +540,9 @@ func _input(event: InputEvent) -> void:
         for index in ascension_positions.size():
             if Rect2(ascension_positions[index] - Vector2(100, 44), Vector2(200, 88)).has_point(event.position): choose_ascension(index)
     if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "death":
-        if Rect2(Vector2(410, 430), Vector2(190, 70)).has_point(event.position): buy_meta("damage", 30)
-        elif Rect2(Vector2(625, 430), Vector2(190, 70)).has_point(event.position): buy_meta("health", 35)
-        elif Rect2(Vector2(840, 430), Vector2(190, 70)).has_point(event.position): buy_meta("range", 25)
+        if Rect2(Vector2(280, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position): buy_meta("damage", 30)
+        elif Rect2(Vector2(640, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position): buy_meta("health", 35)
+        elif Rect2(Vector2(1000, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position): buy_meta("range", 25)
 
 func buy_meta(kind: String, cost: int) -> void:
     if crown_coins < cost: return
@@ -873,13 +884,77 @@ func _draw() -> void:
         draw_enemy_burst(burst)
     for impact in projectile_impacts:
         draw_projectile_impact(impact)
+    for debris in death_debris:
+        var debris_alpha: float = debris.life / 0.45 * 0.8
+        draw_circle(debris.position, debris.size, Color(debris.color, debris_alpha))
     for number in damage_numbers:
         draw_damage_number(number)
     if player:
         draw_knight()
         for index in equipped.size(): draw_equipped_weapon(equipped[index], index, equipped.size())
-    if mode == "start": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .78)); draw_string(ThemeDB.fallback_font, Vector2(390, 315), "CROWN OF THE ABSOLUTE", HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(430, 355), "MOVE  /  COLLECT RELICS  /  ASCEND", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("63d1c2")); draw_string(ThemeDB.fallback_font, Vector2(470, 410), "CLICK TO ENTER  ·  R TO RESTART", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("aebbb2"))
-    if mode == "ascension": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); if ascension_flash > 0.0: draw_circle(Vector2(640, 245), 120.0 - ascension_flash * 90.0, Color(0.39, 0.82, 0.76, ascension_flash * 0.12)); draw_string(ThemeDB.fallback_font, Vector2(410, 155), "CONNECTED ASCENSION WEB", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color("f2f0d0")); draw_string(ThemeDB.fallback_font, Vector2(470, 190), "%s PATH  ·  CHOOSE ONE CONNECTED NODE" % weapon_family, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("63d1c2")); for index in ascension_positions.size(): var position: Vector2 = ascension_positions[index]; if index < ascension_options.size(): draw_line(Vector2(640, 245), position, Color(0.38, 0.5, 0.55, .7), 2.0); var id: String = ascension_options[index]; var data: Dictionary = WEAPONS[id] if WEAPONS.has(id) else UPGRADES[id]; draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), Color("182d46")); draw_rect(Rect2(position - Vector2(100, 44), Vector2(200, 88)), data.color, false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, -8), id, HORIZONTAL_ALIGNMENT_LEFT, 164, 13, data.color); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 16), data.get("text", "weapon node"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2"))
-    if mode == "death": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(455, 220), "VESSEL LOST", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color("ed725c")); draw_string(ThemeDB.fallback_font, Vector2(455, 260), "%d CROWN COINS  ·  PRESS R TO RETURN" % crown_coins, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("edc968")); draw_string(ThemeDB.fallback_font, Vector2(455, 300), "WAVE %02d  ·  %d KILLS  ·  %d ESSENCE  ·  +%d COINS" % [wave, run_kills, essence, run_coins_earned], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aebbb2")); var shop_names := ["CROWN EDGE · 30", "THRONE OF IRON · 35", "SOVEREIGN GRASP · 25"]; for index in 3: var position := Vector2(505 + index * 215, 465); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("182d46")); draw_rect(Rect2(position - Vector2(95, 35), Vector2(190, 70)), Color("edc968"), false, 2.0); draw_string(ThemeDB.fallback_font, position + Vector2(-82, 5), shop_names[index], HORIZONTAL_ALIGNMENT_LEFT, 164, 11, Color("f2f0d0"))
-    if mode == "victory": draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, .9)); draw_string(ThemeDB.fallback_font, Vector2(410, 220), "REGENT DEFEATED", HORIZONTAL_ALIGNMENT_LEFT, -1, 34, Color("63d1c2")); draw_string(ThemeDB.fallback_font, Vector2(410, 265), "THE CROWN ENDURES  ·  50 BONUS CROWN COINS", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("edc968")); draw_string(ThemeDB.fallback_font, Vector2(410, 305), "WAVE %02d  ·  %d KILLS  ·  %d ESSENCE" % [wave, run_kills, essence], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aebbb2")); draw_string(ThemeDB.fallback_font, Vector2(470, 360), "PRESS R TO BEGIN A NEW ASCENSION", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aebbb2"))
+    if mode == "start":
+        draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, 0.95))
+        var pulse: float = sin(elapsed * 2.0) * 0.15 + 0.85
+        draw_circle(ARENA_SIZE * 0.5, 200.0, Color(0.39, 0.82, 0.76, pulse * 0.08))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 240), "CROWN OF THE ABSOLUTE", HORIZONTAL_ALIGNMENT_CENTER, -1, 42, Color("f2f0d0"))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 290), "A roguelike ascension", HORIZONTAL_ALIGNMENT_CENTER, -1, 18, Color("63d1c2"))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 360), "Collect relics  ·  Build your arsenal  ·  Face the Dread Regent", HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color("aebbb2"))
+        var button_rect := Rect2(Vector2(640, 430) - Vector2(120, 24), Vector2(240, 48))
+        var button_hover: bool = button_rect.has_point(mouse_position)
+        var button_color: Color = Color("63d1c2") if button_hover else Color("9fd6ff")
+        var button_bg: Color = Color("182d46", 0.6) if button_hover else Color("182d46", 0.4)
+        draw_rect(button_rect, button_bg)
+        draw_rect(button_rect, button_color, false, 2.0 if button_hover else 1.0)
+        draw_string(ThemeDB.fallback_font, Vector2(640, 445), "CLICK TO ENTER", HORIZONTAL_ALIGNMENT_CENTER, -1, 16, button_color)
+        draw_string(ThemeDB.fallback_font, Vector2(640, 560), "Press R to restart  ·  Wave %d  ·  %d coins" % [wave, crown_coins], HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color("aebbb2"))
+    if mode == "ascension":
+        draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, 0.92))
+        if ascension_flash > 0.0: draw_circle(Vector2(640, 245), 120.0 - ascension_flash * 90.0, Color(0.39, 0.82, 0.76, ascension_flash * 0.12))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 120), "CONNECTED ASCENSION WEB", HORIZONTAL_ALIGNMENT_CENTER, -1, 32, Color("f2f0d0"))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 160), "%s PATH  ·  CHOOSE ONE CONNECTED NODE" % weapon_family, HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color("63d1c2"))
+        for index in ascension_positions.size():
+            var position: Vector2 = ascension_positions[index]
+            if index < ascension_options.size():
+                draw_line(Vector2(640, 245), position, Color(0.38, 0.5, 0.55, 0.5), 2.0)
+                var id: String = ascension_options[index]
+                var data: Dictionary = WEAPONS[id] if WEAPONS.has(id) else UPGRADES[id]
+                var option_rect := Rect2(position - Vector2(100, 44), Vector2(200, 88))
+                var option_hover: bool = option_rect.has_point(mouse_position)
+                draw_rect(option_rect, Color("182d46", 0.5))
+                draw_rect(option_rect, data.color, false, 2.0 if option_hover else 1.0)
+                if option_hover: draw_circle(position, 120.0, Color(data.color, 0.04))
+                draw_string(ThemeDB.fallback_font, position + Vector2(-82, -12), id, HORIZONTAL_ALIGNMENT_LEFT, 164, 13, data.color)
+                draw_string(ThemeDB.fallback_font, position + Vector2(-82, 8), data.get("text", "upgrade"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2"))
+    if mode == "death":
+        draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, 0.92))
+        var pulse: float = sin(elapsed * 1.5) * 0.1 + 0.9
+        draw_circle(Vector2(640, 180), 80.0, Color(0.93, 0.45, 0.35, pulse * 0.06))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 180), "VESSEL LOST", HORIZONTAL_ALIGNMENT_CENTER, -1, 42, Color("ed725c"))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 250), "%d CROWN COINS" % crown_coins, HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color("edc968"))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 290), "Wave %02d  ·  %d kills  ·  +%d coins earned" % [wave, run_kills, run_coins_earned], HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color("aebbb2"))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 360), "META UPGRADES", HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color("f2f0d0"))
+        var shop_items := [
+            {"name": "Sword Edge", "desc": "+1 damage", "cost": 30, "pos": Vector2(280, 450)},
+            {"name": "Life Well", "desc": "+1 max health", "cost": 35, "pos": Vector2(640, 450)},
+            {"name": "Far Reach", "desc": "+1 pickup range", "cost": 25, "pos": Vector2(1000, 450)}
+        ]
+        for item in shop_items:
+            var item_rect := Rect2(item.pos - Vector2(95, 35), Vector2(190, 70))
+            var item_hover: bool = item_rect.has_point(mouse_position) and crown_coins >= item.cost
+            var item_color: Color = Color("63d1c2") if item_hover else Color("aebbb2") if crown_coins >= item.cost else Color("555566")
+            draw_rect(item_rect, Color("182d46", 0.4))
+            draw_rect(item_rect, item_color, false, 2.0 if item_hover else 1.0)
+            draw_string(ThemeDB.fallback_font, item.pos + Vector2(-82, -12), item.name, HORIZONTAL_ALIGNMENT_LEFT, 164, 12, item_color)
+            draw_string(ThemeDB.fallback_font, item.pos + Vector2(-82, 6), item.desc, HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2"))
+            draw_string(ThemeDB.fallback_font, item.pos + Vector2(-82, 20), "%d coins" % item.cost, HORIZONTAL_ALIGNMENT_LEFT, 164, 9, Color("edc968"))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 600), "Press R to begin a new run", HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color("aebbb2"))
+    if mode == "victory":
+        draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, 0.92))
+        var pulse: float = sin(elapsed * 1.8) * 0.2 + 0.8
+        draw_circle(Vector2(640, 200), 100.0, Color(0.39, 0.82, 0.76, pulse * 0.08))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 190), "REGENT DEFEATED", HORIZONTAL_ALIGNMENT_CENTER, -1, 40, Color("63d1c2"))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 250), "The Crown endures", HORIZONTAL_ALIGNMENT_CENTER, -1, 18, Color("aebbb2"))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 300), "50 BONUS CROWN COINS", HORIZONTAL_ALIGNMENT_CENTER, -1, 20, Color("edc968"))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 350), "Wave %02d  ·  %d kills  ·  %d essence gathered" % [wave, run_kills, essence], HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color("aebbb2"))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 520), "Press R to ascend further into the crown", HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color("63d1c2"))
     draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

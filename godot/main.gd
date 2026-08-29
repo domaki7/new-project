@@ -85,6 +85,9 @@ var status := "UNARMED - COLLECT YOUR FIRST RELIC"
 var crown_coins := 0
 var run_kills := 0
 var run_coins_earned := 0
+var best_kills := 0
+var best_wave := 1
+var new_personal_best := false
 var meta_damage := 0
 var meta_health := 0
 var meta_range := 0
@@ -234,6 +237,8 @@ func load_meta() -> void:
         meta_damage = int(config.get_value("meta", "damage", 0))
         meta_health = int(config.get_value("meta", "health", 0))
         meta_range = int(config.get_value("meta", "range", 0))
+        best_kills = int(config.get_value("records", "best_kills", 0))
+        best_wave = int(config.get_value("records", "best_wave", 1))
 
 func save_meta() -> void:
     var config := ConfigFile.new()
@@ -241,7 +246,14 @@ func save_meta() -> void:
     config.set_value("meta", "damage", meta_damage)
     config.set_value("meta", "health", meta_health)
     config.set_value("meta", "range", meta_range)
+    config.set_value("records", "best_kills", best_kills)
+    config.set_value("records", "best_wave", best_wave)
     config.save(meta_file)
+
+func record_run_result() -> void:
+    new_personal_best = run_kills > best_kills or wave > best_wave
+    best_kills = max(best_kills, run_kills)
+    best_wave = max(best_wave, wave)
 
 func load_path_nodes() -> void:
     var config := ConfigFile.new()
@@ -275,7 +287,7 @@ func start_game() -> void:
     critical_chance = 0.0
     vitality_regen = 0.0
     run_pickup_range = 0.0
-    level = 1; essence = 0; wave = 1; wave_kill_goal = 10; next_ascension_essence = 120; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); damage_numbers.clear(); spawn_ripples.clear(); death_debris.clear(); dash_shockwaves.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
+    level = 1; essence = 0; wave = 1; wave_kill_goal = 10; next_ascension_essence = 120; boss_spawned = false; run_kills = 0; run_coins_earned = 0; new_personal_best = false; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); damage_numbers.clear(); spawn_ripples.clear(); death_debris.clear(); dash_shockwaves.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
@@ -542,6 +554,7 @@ func update_enemies(delta: float) -> void:
                 mode = "victory"
                 menu_transition = 1.0
                 play_sfx("victory")
+                record_run_result()
                 crown_coins += 50
                 run_coins_earned = 50
                 save_meta()
@@ -597,6 +610,7 @@ func die() -> void:
     menu_selection = 0
     menu_hover_target = ""
     run_coins_earned = max(5, essence / 12 + level * 3)
+    record_run_result()
     crown_coins += run_coins_earned
     save_meta()
     status = "VESSEL LOST - %d CROWN COINS" % crown_coins
@@ -1099,6 +1113,7 @@ func _draw() -> void:
         draw_rect(button_visual_rect, button_color * Color(1, 1, 1, transition_alpha), false, 2.0 if button_hover else 1.0)
         draw_string(ThemeDB.fallback_font, Vector2(0, 445), "CLICK TO ENTER", HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), 16, button_color * Color(1, 1, 1, transition_alpha))
         draw_string(ThemeDB.fallback_font, Vector2(0, 560), "Press R to restart  ·  Wave %d  ·  %d coins" % [wave, crown_coins], HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), 12, Color("aebbb2", transition_alpha * 0.7))
+        draw_string(ThemeDB.fallback_font, Vector2(0, 585), "LEGACY RECORD  ·  WAVE %02d  ·  %d KILLS" % [best_wave, best_kills], HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), 11, Color("edc968", transition_alpha * 0.75))
     if mode == "ascension":
         draw_menu_backdrop(Color("63d1c2"))
         var transition_scale: float = 1.0 - menu_transition * 0.15
@@ -1137,6 +1152,7 @@ func _draw() -> void:
         draw_string(ThemeDB.fallback_font, Vector2(640, 180), "VESSEL LOST", HORIZONTAL_ALIGNMENT_CENTER, -1, int(42.0 * transition_scale), Color("ed725c", transition_alpha))
         draw_string(ThemeDB.fallback_font, Vector2(640, 250), "%d CROWN COINS" % crown_coins, HORIZONTAL_ALIGNMENT_CENTER, -1, int(20.0 * transition_scale), Color("edc968", transition_alpha))
         draw_string(ThemeDB.fallback_font, Vector2(640, 290), "Wave %02d  ·  %d kills  ·  +%d coins earned" % [wave, run_kills, run_coins_earned], HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color("aebbb2", transition_alpha * 0.8))
+        if new_personal_best: draw_string(ThemeDB.fallback_font, Vector2(0, 320), "NEW LEGACY RECORD", HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), 15, Color("edc968", transition_alpha))
         draw_string(ThemeDB.fallback_font, Vector2(640, 360), "META UPGRADES", HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color("f2f0d0", transition_alpha))
         var shop_items := [
             {"name": "Sword Edge", "desc": "+1 damage", "cost": 30, "pos": Vector2(280, 450)},
@@ -1167,5 +1183,6 @@ func _draw() -> void:
         draw_string(ThemeDB.fallback_font, Vector2(640, 250), "The Crown endures", HORIZONTAL_ALIGNMENT_CENTER, -1, 18, Color("aebbb2", transition_alpha * 0.8))
         draw_string(ThemeDB.fallback_font, Vector2(640, 300), "50 BONUS CROWN COINS", HORIZONTAL_ALIGNMENT_CENTER, -1, int(20.0 * transition_scale), Color("edc968", transition_alpha))
         draw_string(ThemeDB.fallback_font, Vector2(640, 350), "Wave %02d  ·  %d kills  ·  %d essence gathered" % [wave, run_kills, essence], HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color("aebbb2", transition_alpha * 0.8))
+        if new_personal_best: draw_string(ThemeDB.fallback_font, Vector2(0, 390), "NEW LEGACY RECORD", HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), 15, Color("edc968", transition_alpha))
         draw_string(ThemeDB.fallback_font, Vector2(640, 520), "Press R to ascend further into the crown", HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color("63d1c2", transition_alpha * 0.9))
     draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

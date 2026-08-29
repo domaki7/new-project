@@ -53,6 +53,8 @@ var weapon_family := ""
 var level := 1
 var essence := 0
 var wave := 1
+var wave_kill_goal := 10
+var next_ascension_essence := 120
 var boss_spawned := false
 var spawn_timer := 0.0
 var pickup_timer := 0.0
@@ -194,6 +196,7 @@ func setup_hud() -> void:
     layer.add_child(panel)
     hud_labels["title"] = make_label(layer, Vector2(44, 31), "CROWN OF THE ABSOLUTE", 24, Color("f2f0d0"))
     hud_labels["stats"] = make_label(layer, Vector2(650, 32), "", 14, Color("edc968"))
+    hud_labels["progress"] = make_label(layer, Vector2(44, 98), "", 12, Color("edc968"))
     hud_labels["status"] = make_label(layer, Vector2(44, 122), "", 13, Color("63d1c2"))
     hud_labels["rites"] = make_label(layer, Vector2(44, 650), "", 12, Color("63d1c2"))
     hud_labels["build"] = make_label(layer, Vector2(44, 675), "", 13, Color("aebbb2"))
@@ -212,6 +215,8 @@ func update_hud() -> void:
     if hud_labels.is_empty(): return
     var dash_text: String = "DASH READY" if dash_cooldown <= 0.0 else "DASH %.1fs" % dash_cooldown
     hud_labels["stats"].text = "VESSEL %02d     ESSENCE %03d     WAVE %02d / 05     VITALITY %03d     %s" % [level, essence, wave, max(0, int(player.health)), dash_text]
+    var wave_goal: String = "REGENT APPROACHING" if wave >= 5 else "WAVE %02d: %d / %d KILLS" % [wave, run_kills, wave_kill_goal]
+    hud_labels["progress"].text = "ASCENSION: %d / %d ESSENCE     %s" % [essence, next_ascension_essence, wave_goal]
     hud_labels["status"].text = status
     var rites: Array[String] = []
     if run_damage_multiplier > 1.0: rites.append("DMG x%.2f" % run_damage_multiplier)
@@ -270,7 +275,7 @@ func start_game() -> void:
     critical_chance = 0.0
     vitality_regen = 0.0
     run_pickup_range = 0.0
-    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); damage_numbers.clear(); spawn_ripples.clear(); death_debris.clear(); dash_shockwaves.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
+    level = 1; essence = 0; wave = 1; wave_kill_goal = 10; next_ascension_essence = 120; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); damage_numbers.clear(); spawn_ripples.clear(); death_debris.clear(); dash_shockwaves.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
@@ -314,12 +319,13 @@ func update_game(delta: float) -> void:
         var threat: float = max(0.0, 1.0 - dist / 160.0)
         danger_proximity = max(danger_proximity, threat)
     update_enemies(delta)
-    if enemies.size() > 12 + wave * 3:
-        var previous_wave: int = wave
-        wave = min(5, wave + 1)
-        if wave > previous_wave:
-            status = "WAVE %02d REACHED - THREATS ESCALATING" % wave
-            play_sfx("wave")
+    if wave < 5 and run_kills >= wave_kill_goal:
+        wave += 1
+        wave_kill_goal += 10 + wave * 4
+        status = "WAVE %02d REACHED - THREATS ESCALATING" % wave
+        screen_shake = max(screen_shake, 0.06)
+        spawn_ripples.append({"position": ARENA_SIZE * 0.5, "radius": 0.0, "life": 0.4, "color": Color("edc968")})
+        play_sfx("wave")
     player.health = min(player.max_health, player.health + (float(meta_health) * 0.02 + vitality_regen) * delta)
 
 func spawn_enemy() -> void:
@@ -541,14 +547,15 @@ func update_enemies(delta: float) -> void:
                 save_meta()
                 status = "THE DREAD REGENT FALLS - 50 BONUS CROWN COINS"
 
-        if essence >= 240 and mode == "play": open_ascension()
+        if essence >= next_ascension_essence and mode == "play": open_ascension()
 
 func open_ascension() -> void:
     mode = "ascension"
     menu_transition = 1.0
     menu_selection = 0
     menu_hover_target = ""
-    essence -= 240
+    essence -= next_ascension_essence
+    next_ascension_essence = int(ceil(float(next_ascension_essence) * 1.35))
     ascension_flash = 0.45
     play_sfx("ascension")
     ascension_options.clear()

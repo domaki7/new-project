@@ -71,6 +71,7 @@ var dash_trail: Array[Dictionary] = []
 var mode := "start"
 var mouse_position := Vector2.ZERO
 var menu_transition := 0.0
+var menu_selection := 0
 var danger_proximity := 0.0
 var status := "UNARMED - COLLECT YOUR FIRST RELIC"
 var crown_coins := 0
@@ -238,6 +239,7 @@ func save_path_nodes() -> void:
 func start_game() -> void:
     mode = "play"
     menu_transition = 0.0
+    menu_selection = 0
     level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); damage_numbers.clear(); spawn_ripples.clear(); death_debris.clear(); dash_shockwaves.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
@@ -512,6 +514,7 @@ func update_enemies(delta: float) -> void:
 func open_ascension() -> void:
     mode = "ascension"
     menu_transition = 1.0
+    menu_selection = 0
     essence -= 240
     ascension_flash = 0.45
     play_sfx("ascension")
@@ -551,6 +554,7 @@ func damage_player(amount: float) -> void:
 func die() -> void:
     mode = "death"
     menu_transition = 1.0
+    menu_selection = 0
     run_coins_earned = max(5, essence / 12 + level * 3)
     crown_coins += run_coins_earned
     save_meta()
@@ -562,15 +566,33 @@ func _input(event: InputEvent) -> void:
         play_sfx("ui_select")
         start_game()
     if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE and mode == "play": dash_requested = true
-    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "start":
+    if event is InputEventKey and event.pressed and menu_transition < 0.1:
+        if mode == "start" and (event.keycode == KEY_ENTER or event.keycode == KEY_SPACE):
+            play_sfx("ui_select")
+            start_game()
+        elif mode == "ascension":
+            if event.keycode == KEY_LEFT or event.keycode == KEY_A: menu_selection = posmod(menu_selection - 1, ascension_options.size())
+            elif event.keycode == KEY_RIGHT or event.keycode == KEY_D: menu_selection = posmod(menu_selection + 1, ascension_options.size())
+            elif event.keycode == KEY_ENTER or event.keycode == KEY_SPACE:
+                play_sfx("ui_select")
+                choose_ascension(menu_selection)
+        elif mode == "death":
+            if event.keycode == KEY_LEFT or event.keycode == KEY_A: menu_selection = posmod(menu_selection - 1, 3)
+            elif event.keycode == KEY_RIGHT or event.keycode == KEY_D: menu_selection = posmod(menu_selection + 1, 3)
+            elif event.keycode == KEY_ENTER or event.keycode == KEY_SPACE:
+                var shop_costs := [30, 35, 25]
+                var shop_kinds := ["damage", "health", "range"]
+                play_sfx("ui_select")
+                buy_meta(shop_kinds[menu_selection], shop_costs[menu_selection])
+    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "start" and menu_transition < 0.1:
         play_sfx("ui_select")
         start_game()
-    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "ascension":
+    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "ascension" and menu_transition < 0.1:
         for index in ascension_positions.size():
             if Rect2(ascension_positions[index] - Vector2(100, 44), Vector2(200, 88)).has_point(event.position):
                 play_sfx("ui_select")
                 choose_ascension(index)
-    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "death":
+    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "death" and menu_transition < 0.1:
         if Rect2(Vector2(280, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position):
             play_sfx("ui_select")
             buy_meta("damage", 30)
@@ -984,11 +1006,10 @@ func _draw() -> void:
                 var data: Dictionary = WEAPONS[id] if WEAPONS.has(id) else UPGRADES[id]
                 var option_rect := Rect2(position - Vector2(100, 44), Vector2(200, 88))
                 var option_hover: bool = option_rect.has_point(mouse_position) and menu_transition < 0.1
-                var card_scale: float = 1.0 + (0.05 if option_hover else 0.0)
-                var card_pos: Vector2 = position
+                var option_focused: bool = index == menu_selection and menu_transition < 0.1
                 draw_rect(option_rect, Color("182d46", 0.5 * transition_alpha))
-                draw_rect(option_rect, data.color * Color(1, 1, 1, transition_alpha * (0.8 if option_hover else 0.6)), false, 2.0 if option_hover else 1.0)
-                if option_hover: draw_circle(position, 120.0, Color(data.color, 0.05 * transition_alpha))
+                draw_rect(option_rect, data.color * Color(1, 1, 1, transition_alpha * (0.9 if option_hover or option_focused else 0.6)), false, 2.0 if option_hover or option_focused else 1.0)
+                if option_hover or option_focused: draw_circle(position, 120.0, Color(data.color, 0.05 * transition_alpha))
                 draw_string(ThemeDB.fallback_font, position + Vector2(-82, -12), id, HORIZONTAL_ALIGNMENT_LEFT, 164, int(13.0 * transition_scale), Color(data.color, transition_alpha))
                 draw_string(ThemeDB.fallback_font, position + Vector2(-82, 8), data.get("text", "upgrade"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2", transition_alpha * 0.8))
     if mode == "death":
@@ -1010,15 +1031,16 @@ func _draw() -> void:
             var item = shop_items[item_idx]
             var item_rect := Rect2(item.pos - Vector2(95, 35), Vector2(190, 70))
             var item_hover: bool = item_rect.has_point(mouse_position) and crown_coins >= item.cost and menu_transition < 0.1
-            var item_color: Color = Color("63d1c2") if item_hover else Color("aebbb2") if crown_coins >= item.cost else Color("555566")
+            var item_focused: bool = item_idx == menu_selection and crown_coins >= item.cost and menu_transition < 0.1
+            var item_color: Color = Color("63d1c2") if item_hover or item_focused else Color("aebbb2") if crown_coins >= item.cost else Color("555566")
             var item_delay: float = 0.05 + item_idx * 0.08
             var item_alpha: float = max(0.0, (1.0 - menu_transition) / max(0.001, item_delay))
             draw_rect(item_rect, Color("182d46", 0.4 * item_alpha))
-            draw_rect(item_rect, item_color * Color(1, 1, 1, item_alpha), false, 2.0 if item_hover else 1.0)
+            draw_rect(item_rect, item_color * Color(1, 1, 1, item_alpha), false, 2.0 if item_hover or item_focused else 1.0)
             draw_string(ThemeDB.fallback_font, item.pos + Vector2(-82, -12), item.name, HORIZONTAL_ALIGNMENT_LEFT, 164, 12, item_color * Color(1, 1, 1, item_alpha))
             draw_string(ThemeDB.fallback_font, item.pos + Vector2(-82, 6), item.desc, HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2", item_alpha * 0.8))
             draw_string(ThemeDB.fallback_font, item.pos + Vector2(-82, 20), "%d coins" % item.cost, HORIZONTAL_ALIGNMENT_LEFT, 164, 9, Color("edc968", item_alpha))
-        draw_string(ThemeDB.fallback_font, Vector2(640, 600), "Press R to begin a new run", HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color("aebbb2", transition_alpha * 0.7))
+        draw_string(ThemeDB.fallback_font, Vector2(640, 600), "LEFT / RIGHT SELECT  ·  ENTER PURCHASE  ·  R NEW RUN", HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color("aebbb2", transition_alpha * 0.7))
     if mode == "victory":
         draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, 0.92))
         var pulse: float = sin(elapsed * 1.8) * 0.2 + 0.8

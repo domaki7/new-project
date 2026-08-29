@@ -284,7 +284,7 @@ func spawn_enemy() -> void:
     elif roll < 0.78: type = "ORACLE"
     var data: Dictionary = MONSTERS[type]
     var health: float = data.health + wave * 14.0
-    enemies.append({"position": position, "type": type, "health": health, "max_health": health, "radius": data.radius, "speed": data.speed + wave * 4.0, "velocity": Vector2.ZERO, "damage": data.damage, "essence": data.essence, "shot_timer": 1.5, "poison": 0.0, "slow": 0.0, "hit_flash": 0.0})
+    enemies.append({"position": position, "type": type, "health": health, "max_health": health, "radius": data.radius, "speed": data.speed + wave * 4.0, "velocity": Vector2.ZERO, "damage": data.damage, "essence": data.essence, "shot_timer": 1.5, "poison": 0.0, "slow": 0.0, "hit_flash": 0.0, "impulse": Vector2.ZERO})
 
 func spawn_pickup() -> void:
     var options: Array[String] = []
@@ -380,6 +380,8 @@ func fire_weapon(id: String, target: Dictionary) -> void:
                 enemy.hit_flash = 0.14
                 var recoil: float = 10.0 if data.kind == "blade" else 18.0 if data.kind == "nova" else 7.0
                 enemy.position += relative.normalized() * recoil
+                var knockback_strength: float = 280.0 if data.kind == "blade" else 420.0 if data.kind == "nova" else 200.0
+                enemy.impulse = relative.normalized() * knockback_strength
                 screen_shake = max(screen_shake, 0.025 if data.kind == "blade" else 0.045 if data.kind == "nova" else 0.02)
                 hit_stop = max(hit_stop, 0.018 if data.kind == "blade" else 0.032 if data.kind == "nova" else 0.014)
                 melee_impacts.append({"position": enemy.position, "style": data.style, "color": data.color, "life": 0.22, "angle": angle})
@@ -434,6 +436,7 @@ func update_enemies(delta: float) -> void:
         var angle: float = enemy.position.angle_to_point(player.position)
         var separation: float = -1.0 if enemy.type == "ORACLE" and enemy.position.distance_to(player.position) < 240.0 else 1.0
         enemy.slow = max(0.0, enemy.slow - delta); enemy.poison = max(0.0, enemy.poison - delta); enemy.hit_flash = max(0.0, enemy.hit_flash - delta)
+        enemy.impulse = enemy.impulse.move_toward(Vector2.ZERO, 880.0 * delta)
         enemy.health -= 7.0 * delta if enemy.poison > 0.0 else 0.0
         var crowd_push := Vector2.ZERO
         for other in enemies:
@@ -448,7 +451,7 @@ func update_enemies(delta: float) -> void:
         var enemy_target_velocity: Vector2 = movement_direction * enemy.speed * (0.45 if enemy.slow > 0 else 1.0)
         var enemy_steering: float = 520.0 if enemy.slow <= 0.0 else 260.0
         enemy.velocity = enemy.velocity.move_toward(enemy_target_velocity, enemy_steering * delta)
-        enemy.position += enemy.velocity * delta
+        enemy.position += (enemy.velocity + enemy.impulse) * delta
         if enemy.type == "ORACLE":
             enemy.shot_timer -= delta
             if enemy.shot_timer <= 0.0 and enemy.position.distance_to(player.position) < 520.0:

@@ -45,6 +45,7 @@ var melee_impacts: Array[Dictionary] = []
 var enemy_bursts: Array[Dictionary] = []
 var projectile_impacts: Array[Dictionary] = []
 var damage_numbers: Array[Dictionary] = []
+var spawn_ripples: Array[Dictionary] = []
 var unlocked_nodes := {}
 var weapon_family := ""
 var level := 1
@@ -156,6 +157,8 @@ func _process(delta: float) -> void:
         number.life = max(0.0, float(number.life) - delta)
         number.position.y -= 22.0 * delta
     damage_numbers = damage_numbers.filter(func(number: Dictionary) -> bool: return number.life > 0.0)
+    for ripple in spawn_ripples: ripple.life = max(0.0, float(ripple.life) - delta)
+    spawn_ripples = spawn_ripples.filter(func(ripple: Dictionary) -> bool: return ripple.life > 0.0)
     invulnerable = max(0.0, invulnerable - delta)
     update_hud()
     queue_redraw()
@@ -285,6 +288,7 @@ func spawn_enemy() -> void:
     var data: Dictionary = MONSTERS[type]
     var health: float = data.health + wave * 14.0
     enemies.append({"position": position, "type": type, "health": health, "max_health": health, "radius": data.radius, "speed": data.speed + wave * 4.0, "velocity": Vector2.ZERO, "damage": data.damage, "essence": data.essence, "shot_timer": 1.5, "poison": 0.0, "slow": 0.0, "hit_flash": 0.0, "impulse": Vector2.ZERO})
+    spawn_ripples.append({"position": position, "radius": 0.0, "life": 0.4, "color": data.color})
 
 func spawn_pickup() -> void:
     var options: Array[String] = []
@@ -812,6 +816,10 @@ func _draw() -> void:
         var mote_position := Vector2(fmod(mote_seed * 31.0 + elapsed * (5.0 + float(mote % 3)), ARENA_SIZE.x), fmod(mote_seed * 17.0 + elapsed * (3.0 + float(mote % 4)), ARENA_SIZE.y))
         var mote_alpha: float = 0.05 + sin(elapsed * 2.0 + mote_seed) * 0.025
         draw_circle(mote_position, 1.0 + float(mote % 2), Color(0.75, 0.84, 0.8, mote_alpha))
+    for ripple in spawn_ripples:
+        var ripple_radius: float = ripple.radius + (60.0 - ripple.radius) * (1.0 - ripple.life / 0.4)
+        var ripple_alpha: float = ripple.life / 0.4 * 0.6
+        draw_arc(ripple.position, ripple_radius, 0.0, TAU, 24, Color(ripple.color, ripple_alpha), 2.0)
     draw_polyline(PackedVector2Array([Vector2(26, 26), Vector2(ARENA_SIZE.x - 26, 26), Vector2(ARENA_SIZE.x - 26, ARENA_SIZE.y - 26), Vector2(26, ARENA_SIZE.y - 26), Vector2(26, 26)]), Color(0.93, .79, .4, .22), 2.0)
     for pickup in pickups:
         var data: Dictionary = WEAPONS[pickup.name] if WEAPONS.has(pickup.name) else UPGRADES[pickup.name]

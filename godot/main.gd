@@ -743,6 +743,19 @@ func draw_knight() -> void:
     var position: Vector2 = player.position
     var health_ratio: float = clamp(player.health / player.max_health, 0.0, 1.0)
     var health_color := Color("63d1c2") if health_ratio > 0.35 else Color("ed725c")
+    var movement_ratio: float = clamp(player_velocity.length() / 620.0, 0.0, 1.0)
+    var ward_pulse: float = sin(elapsed * 3.5) * 0.5 + 0.5
+    var ward_color: Color = Color("63d1c2") if health_ratio > 0.35 else Color("ed725c")
+    draw_circle(position, 38.0 + ward_pulse * 4.0, Color(ward_color, 0.04 + ward_pulse * 0.025))
+    draw_arc(position, 53.0, elapsed * 0.85, elapsed * 0.85 + PI * (0.4 + health_ratio * 0.65), 24, Color(ward_color, 0.14 + ward_pulse * 0.08), 1.5)
+    draw_arc(position, 53.0, elapsed * -0.65 + PI, elapsed * -0.65 + PI * 1.35, 24, Color("edc968", 0.1 + ward_pulse * 0.05), 1.0)
+    if movement_ratio > 0.05:
+        var movement_direction: Vector2 = player_velocity.normalized()
+        for trail_index in range(3):
+            var trail_progress: float = (float(trail_index) + 1.0) / 3.0
+            var trail_position: Vector2 = position - movement_direction * trail_progress * (18.0 + movement_ratio * 30.0)
+            var trail_radius: float = (8.0 - trail_progress * 3.0) * movement_ratio
+            draw_circle(trail_position, trail_radius, Color(ward_color, (0.12 - trail_progress * 0.03) * movement_ratio))
     draw_arc(position, 45.0, -PI * 0.5, -PI * 0.5 + TAU * health_ratio, 28, health_color, 3.0)
     draw_arc(position, 45.0, -PI * 0.5 + TAU * health_ratio, PI * 1.5, 28, Color(0.08, 0.12, 0.16, 0.75), 3.0)
     if dash_flash > 0.0:

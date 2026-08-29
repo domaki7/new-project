@@ -634,9 +634,9 @@ func menu_target_at(position: Vector2) -> String:
             if Rect2(ascension_positions[index] - Vector2(100, 44), Vector2(200, 88)).has_point(position): return "ascension_%d" % index
     if mode == "death":
         var shop_positions := [Vector2(280, 450), Vector2(640, 450), Vector2(1000, 450)]
-        var shop_costs := [30, 35, 25]
+        var shop_kinds := ["damage", "health", "range"]
         for index in shop_positions.size():
-            if crown_coins >= shop_costs[index] and Rect2(shop_positions[index] - Vector2(95, 35), Vector2(190, 70)).has_point(position): return "shop_%d" % index
+            if crown_coins >= meta_upgrade_cost(shop_kinds[index]) and Rect2(shop_positions[index] - Vector2(95, 35), Vector2(190, 70)).has_point(position): return "shop_%d" % index
     return ""
 
 func _input(event: InputEvent) -> void:
@@ -667,10 +667,9 @@ func _input(event: InputEvent) -> void:
             if event.keycode == KEY_LEFT or event.keycode == KEY_A: menu_selection = posmod(menu_selection - 1, 3)
             elif event.keycode == KEY_RIGHT or event.keycode == KEY_D: menu_selection = posmod(menu_selection + 1, 3)
             elif event.keycode == KEY_ENTER or event.keycode == KEY_SPACE:
-                var shop_costs := [30, 35, 25]
                 var shop_kinds := ["damage", "health", "range"]
                 play_sfx("ui_select")
-                buy_meta(shop_kinds[menu_selection], shop_costs[menu_selection])
+                buy_meta(shop_kinds[menu_selection])
     if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "start" and menu_transition < 0.1:
         var start_button := Rect2(Vector2(520, 406), Vector2(240, 48))
         if start_button.has_point(event.position):
@@ -684,15 +683,21 @@ func _input(event: InputEvent) -> void:
     if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and mode == "death" and menu_transition < 0.1:
         if Rect2(Vector2(280, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position):
             play_sfx("ui_select")
-            buy_meta("damage", 30)
+            buy_meta("damage")
         elif Rect2(Vector2(640, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position):
             play_sfx("ui_select")
-            buy_meta("health", 35)
+            buy_meta("health")
         elif Rect2(Vector2(1000, 450) - Vector2(95, 35), Vector2(190, 70)).has_point(event.position):
             play_sfx("ui_select")
-            buy_meta("range", 25)
+            buy_meta("range")
 
-func buy_meta(kind: String, cost: int) -> void:
+func meta_upgrade_cost(kind: String) -> int:
+    var base_cost: int = 30 if kind == "damage" else 35 if kind == "health" else 25
+    var owned: int = meta_damage if kind == "damage" else meta_health if kind == "health" else meta_range
+    return int(round(base_cost * pow(1.15, owned)))
+
+func buy_meta(kind: String) -> void:
+    var cost: int = meta_upgrade_cost(kind)
     if crown_coins < cost: return
     crown_coins -= cost
     if kind == "damage": meta_damage += 1
@@ -1166,23 +1171,24 @@ func _draw() -> void:
         if new_personal_best: draw_string(ThemeDB.fallback_font, Vector2(0, 320), "NEW LEGACY RECORD", HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), 15, Color("edc968", transition_alpha))
         draw_string(ThemeDB.fallback_font, Vector2(640, 360), "META UPGRADES", HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color("f2f0d0", transition_alpha))
         var shop_items := [
-            {"name": "Sword Edge", "desc": "+1 damage", "cost": 30, "pos": Vector2(280, 450)},
-            {"name": "Life Well", "desc": "+1 max health", "cost": 35, "pos": Vector2(640, 450)},
-            {"name": "Far Reach", "desc": "+1 pickup range", "cost": 25, "pos": Vector2(1000, 450)}
+            {"name": "Sword Edge", "desc": "+1 damage", "kind": "damage", "pos": Vector2(280, 450)},
+            {"name": "Life Well", "desc": "+1 max health", "kind": "health", "pos": Vector2(640, 450)},
+            {"name": "Far Reach", "desc": "+1 pickup range", "kind": "range", "pos": Vector2(1000, 450)}
         ]
         for item_idx in shop_items.size():
             var item = shop_items[item_idx]
+            var item_cost: int = meta_upgrade_cost(item.kind)
             var item_rect := Rect2(item.pos - Vector2(95, 35), Vector2(190, 70))
-            var item_hover: bool = item_rect.has_point(mouse_position) and crown_coins >= item.cost and menu_transition < 0.1
-            var item_focused: bool = item_idx == menu_selection and crown_coins >= item.cost and menu_transition < 0.1
-            var item_color: Color = Color("63d1c2") if item_hover or item_focused else Color("aebbb2") if crown_coins >= item.cost else Color("555566")
+            var item_hover: bool = item_rect.has_point(mouse_position) and crown_coins >= item_cost and menu_transition < 0.1
+            var item_focused: bool = item_idx == menu_selection and crown_coins >= item_cost and menu_transition < 0.1
+            var item_color: Color = Color("63d1c2") if item_hover or item_focused else Color("aebbb2") if crown_coins >= item_cost else Color("555566")
             var item_delay: float = 0.05 + item_idx * 0.08
             var item_alpha: float = max(0.0, (1.0 - menu_transition) / max(0.001, item_delay))
             draw_rect(item_rect, Color("182d46", 0.4 * item_alpha))
             draw_rect(item_rect, item_color * Color(1, 1, 1, item_alpha), false, 2.0 if item_hover or item_focused else 1.0)
             draw_string(ThemeDB.fallback_font, item.pos + Vector2(-82, -12), item.name, HORIZONTAL_ALIGNMENT_LEFT, 164, 12, item_color * Color(1, 1, 1, item_alpha))
             draw_string(ThemeDB.fallback_font, item.pos + Vector2(-82, 6), item.desc, HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2", item_alpha * 0.8))
-            draw_string(ThemeDB.fallback_font, item.pos + Vector2(-82, 20), "%d coins" % item.cost, HORIZONTAL_ALIGNMENT_LEFT, 164, 9, Color("edc968", item_alpha))
+            draw_string(ThemeDB.fallback_font, item.pos + Vector2(-82, 20), "%d coins" % item_cost, HORIZONTAL_ALIGNMENT_LEFT, 164, 9, Color("edc968", item_alpha))
         draw_string(ThemeDB.fallback_font, Vector2(640, 600), "LEFT / RIGHT SELECT  ·  ENTER PURCHASE  ·  R NEW RUN", HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color("aebbb2", transition_alpha * 0.7))
     if mode == "victory":
         draw_menu_backdrop(Color("edc968"))

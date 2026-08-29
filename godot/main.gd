@@ -369,7 +369,7 @@ func spawn_enemy() -> void:
     elif roll < 0.78: type = "ORACLE"
     var data: Dictionary = MONSTERS[type]
     var health: float = data.health + wave * 14.0
-    enemies.append({"position": position, "type": type, "health": health, "max_health": health, "radius": data.radius, "speed": data.speed + wave * 4.0, "velocity": Vector2.ZERO, "damage": data.damage, "essence": data.essence, "shot_timer": 1.5, "poison": 0.0, "slow": 0.0, "hit_flash": 0.0, "impulse": Vector2.ZERO})
+    enemies.append({"position": position, "type": type, "health": health, "max_health": health, "radius": data.radius, "speed": data.speed + wave * 4.0, "velocity": Vector2.ZERO, "damage": data.damage, "essence": data.essence, "shot_timer": 1.5, "poison": 0.0, "slow": 0.0, "hit_flash": 0.0, "impulse": Vector2.ZERO, "charge_state": "seek", "charge_timer": randf_range(0.9, 1.8), "charge_facing": Vector2.RIGHT})
     spawn_ripples.append({"position": position, "radius": 0.0, "life": 0.4, "color": data.color})
 
 func spawn_pickup(reward_position: Vector2 = Vector2.ZERO) -> void:
@@ -538,9 +538,41 @@ func update_enemies(delta: float) -> void:
             if crowd_distance > 0.1 and crowd_distance < crowd_radius:
                 crowd_push += offset.normalized() * (crowd_radius - crowd_distance) / crowd_radius
         var movement_direction: Vector2 = Vector2(cos(angle), sin(angle)) * separation
-        movement_direction = (movement_direction + crowd_push * 1.8).normalized()
-        var enemy_target_velocity: Vector2 = movement_direction * enemy.speed * (0.45 if enemy.slow > 0 else 1.0)
-        var enemy_steering: float = 520.0 if enemy.slow <= 0.0 else 260.0
+        var enemy_target_velocity: Vector2
+        var enemy_steering: float
+        if enemy.type == "CHARGER":
+            enemy.charge_timer -= delta
+            if enemy.charge_state == "seek":
+                movement_direction = (movement_direction + crowd_push * 1.8).normalized()
+                enemy_target_velocity = movement_direction * enemy.speed * (0.45 if enemy.slow > 0 else 1.0)
+                enemy_steering = 520.0 if enemy.slow <= 0.0 else 260.0
+                if enemy.charge_timer <= 0.0 and enemy.slow <= 0.0 and enemy.position.distance_to(player.position) < 280.0:
+                    enemy.charge_state = "windup"
+                    enemy.charge_timer = 0.45
+                    enemy.charge_facing = Vector2(cos(angle), sin(angle))
+            elif enemy.charge_state == "windup":
+                enemy_target_velocity = Vector2.ZERO
+                enemy_steering = 900.0
+                if enemy.charge_timer <= 0.0:
+                    enemy.charge_state = "dash"
+                    enemy.charge_timer = 0.32
+            elif enemy.charge_state == "dash":
+                enemy_target_velocity = enemy.charge_facing * enemy.speed * 3.4
+                enemy_steering = 2400.0
+                if enemy.charge_timer <= 0.0:
+                    enemy.charge_state = "cooldown"
+                    enemy.charge_timer = 0.9
+            else:
+                movement_direction = (movement_direction + crowd_push * 1.8).normalized()
+                enemy_target_velocity = movement_direction * enemy.speed * 0.4
+                enemy_steering = 400.0
+                if enemy.charge_timer <= 0.0:
+                    enemy.charge_state = "seek"
+                    enemy.charge_timer = randf_range(0.9, 1.8)
+        else:
+            movement_direction = (movement_direction + crowd_push * 1.8).normalized()
+            enemy_target_velocity = movement_direction * enemy.speed * (0.45 if enemy.slow > 0 else 1.0)
+            enemy_steering = 520.0 if enemy.slow <= 0.0 else 260.0
         enemy.velocity = enemy.velocity.move_toward(enemy_target_velocity, enemy_steering * delta)
         enemy.position += (enemy.velocity + enemy.impulse) * delta
         if enemy.type == "ORACLE":
@@ -552,6 +584,7 @@ func update_enemies(delta: float) -> void:
                 enemy.shot_timer = 2.4
         if enemy.position.distance_to(player.position) < enemy.radius + 17.0:
             var contact_damage: float = enemy.damage * delta
+            if enemy.type == "CHARGER" and enemy.get("charge_state", "seek") == "dash": contact_damage *= 2.2
             damage_player(contact_damage)
             if enemy.type == "LEECH": enemy.health = min(enemy.max_health, enemy.health + contact_damage * 0.6)
         if enemy.health <= 0.0:
@@ -748,6 +781,13 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
     elif enemy.type == "CHARGER":
         var horned := PackedVector2Array([position + Vector2(radius + 9, 0), position + Vector2(0, radius), position + Vector2(-radius, radius * .45), position + Vector2(-radius, -radius * .45), position + Vector2(0, -radius)])
         draw_colored_polygon(horned, Color("101826")); draw_polyline(PackedVector2Array([horned[0], horned[1], horned[2], horned[3], horned[4], horned[0]]), data.color, 3.0)
+        var charge_state: String = enemy.get("charge_state", "seek")
+        if charge_state == "windup":
+            var windup_ratio: float = 1.0 - enemy.charge_timer / 0.45
+            draw_arc(position, radius + 6.0 + windup_ratio * 10.0, 0, TAU, 20, Color(1.0, 0.35, 0.25, 0.25 + windup_ratio * 0.45), 3.0)
+            draw_line(position, position + enemy.charge_facing * (radius + 14.0 + windup_ratio * 40.0), Color(1.0, 0.45, 0.3, 0.5 + windup_ratio * 0.4), 3.0)
+        elif charge_state == "dash":
+            draw_line(position - enemy.charge_facing * 30.0, position, Color(1.0, 0.6, 0.3, 0.5), 5.0)
     elif enemy.type == "SPLITTER":
         draw_circle(position, radius, Color("101826")); draw_arc(position, radius, 0, TAU, 16, data.color, 3.0); draw_line(position + Vector2(-radius, 0), position + Vector2(radius, 0), data.color, 2.0)
     elif enemy.type == "LEECH":

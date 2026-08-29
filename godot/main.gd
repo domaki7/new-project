@@ -881,6 +881,18 @@ func draw_damage_number(number: Dictionary) -> void:
     var position: Vector2 = number.position
     draw_string(ThemeDB.fallback_font, position, str(number.amount), HORIZONTAL_ALIGNMENT_CENTER, 46, 12, Color(number.color.r, number.color.g, number.color.b, fade))
 
+func draw_boss_health_bar() -> void:
+    for enemy in enemies:
+        if enemy.type != "DREAD REGENT": continue
+        var health_ratio: float = clamp(enemy.health / enemy.max_health, 0.0, 1.0)
+        var bar_rect := Rect2(Vector2(390, 108), Vector2(500, 18))
+        draw_rect(bar_rect.grow(5), Color(0.02, 0.04, 0.07, 0.78))
+        draw_rect(bar_rect, Color("101826"))
+        draw_rect(bar_rect, Color("edc968", 0.7), false, 1.0)
+        draw_rect(Rect2(bar_rect.position + Vector2(2, 2), Vector2((bar_rect.size.x - 4.0) * health_ratio, bar_rect.size.y - 4.0)), Color("ed725c"))
+        draw_string(ThemeDB.fallback_font, Vector2(0, 101), "DREAD REGENT", HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), 12, Color("edc968"))
+        break
+
 func draw_equipped_weapon(id: String, index: int, total: int) -> void:
     var data: Dictionary = WEAPONS[id]
     var orbit_angle: float = TAU * float(index) / float(max(1, total)) - PI / 2.0
@@ -1026,6 +1038,7 @@ func _draw() -> void:
         draw_knight()
         for index in equipped.size(): draw_equipped_weapon(equipped[index], index, equipped.size())
     draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+    if mode == "play": draw_boss_health_bar()
     if mode == "start":
         draw_menu_backdrop(Color("63d1c2"))
         var pulse: float = sin(elapsed * 2.0) * 0.15 + 0.85

@@ -633,10 +633,18 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
     draw_circle(eye_center + gaze_side * radius * 0.18 + gaze * 1.4, 1.2, Color("101826"))
     draw_circle(position + Vector2(-radius * 0.3, radius * 0.45), radius * 0.16, Color(enemy_color, 0.18))
     if enemy.slow > 0.0:
+        var slow_ratio: float = enemy.slow / 1.8
         draw_arc(position, radius + 8.0, elapsed * 1.8, elapsed * 1.8 + PI * 1.3, 16, Color(0.62, 0.84, 1.0, 0.6), 2.0)
+        draw_circle(position, radius, Color(0.62, 0.84, 1.0, slow_ratio * 0.12))
+        for crystal in range(3):
+            var crystal_angle: float = elapsed * 2.5 + TAU * float(crystal) / 3.0 + position.x * 0.001
+            var crystal_pos: Vector2 = position + Vector2(cos(crystal_angle), sin(crystal_angle)) * radius * (0.7 + slow_ratio * 0.2)
+            draw_circle(crystal_pos, 2.0 + slow_ratio * 1.0, Color(0.62, 0.84, 1.0, 0.7))
     if enemy.poison > 0.0:
-        draw_circle(position + Vector2(sin(elapsed * 4.0) * radius * 0.5, cos(elapsed * 3.0) * radius * 0.4), 3.0, Color("8ed66b"))
-        draw_circle(position + Vector2(cos(elapsed * 3.5) * radius * 0.45, sin(elapsed * 4.5) * radius * 0.35), 2.0, Color("d9ffb7"))
+        var poison_ratio: float = enemy.poison / 3.0
+        draw_circle(position, radius, Color(0.8, 0.9, 0.3, poison_ratio * 0.1))
+        draw_circle(position + Vector2(sin(elapsed * 4.0) * radius * 0.5, cos(elapsed * 3.0) * radius * 0.4), 3.0 + poison_ratio * 2.0, Color("8ed66b"))
+        draw_circle(position + Vector2(cos(elapsed * 3.5) * radius * 0.45, sin(elapsed * 4.5) * radius * 0.35), 2.0 + poison_ratio * 1.5, Color("d9ffb7"))
     if enemy.hit_flash > 0.0:
         draw_arc(position, radius + 5.0, 0, TAU, 20, Color(1.0, 0.9, 0.65, enemy.hit_flash / 0.14), 3.0)
     draw_circle(position - Vector2(radius * .25, radius * .28), radius * .25, Color(enemy_color, 0.16))

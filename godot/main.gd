@@ -47,6 +47,7 @@ var projectile_impacts: Array[Dictionary] = []
 var damage_numbers: Array[Dictionary] = []
 var spawn_ripples: Array[Dictionary] = []
 var death_debris: Array[Dictionary] = []
+var dash_shockwaves: Array[Dictionary] = []
 var unlocked_nodes := {}
 var weapon_family := ""
 var level := 1
@@ -168,6 +169,8 @@ func _process(delta: float) -> void:
         debris.life = max(0.0, float(debris.life) - delta)
         debris.position += debris.velocity * delta
     death_debris = death_debris.filter(func(debris: Dictionary) -> bool: return debris.life > 0.0)
+    for shockwave in dash_shockwaves: shockwave.life = max(0.0, float(shockwave.life) - delta)
+    dash_shockwaves = dash_shockwaves.filter(func(shockwave: Dictionary) -> bool: return shockwave.life > 0.0)
     invulnerable = max(0.0, invulnerable - delta)
     update_hud()
     queue_redraw()
@@ -232,7 +235,7 @@ func save_path_nodes() -> void:
 
 func start_game() -> void:
     mode = "play"
-    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); damage_numbers.clear(); spawn_ripples.clear(); death_debris.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
+    level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); damage_numbers.clear(); spawn_ripples.clear(); death_debris.clear(); dash_shockwaves.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
     pickups.append({"position": player.position + Vector2(100, 0), "name": "VOID BLADE", "family": "MELEE", "life": 40.0})
@@ -257,6 +260,7 @@ func update_game(delta: float) -> void:
         invulnerable = max(invulnerable, 0.24)
         screen_shake = max(screen_shake, 0.035)
         play_sfx("dash")
+        dash_shockwaves.append({"position": player.position, "radius": 0.0, "life": 0.22, "max_radius": 60.0})
     dash_requested = false
     player.position += player_velocity * delta
     player.position.x = clamp(player.position.x, 35.0, ARENA_SIZE.x - 35.0)
@@ -929,6 +933,11 @@ func _draw() -> void:
     for debris in death_debris:
         var debris_alpha: float = debris.life / 0.45 * 0.8
         draw_circle(debris.position, debris.size, Color(debris.color, debris_alpha))
+    for shockwave in dash_shockwaves:
+        var wave_progress: float = 1.0 - shockwave.life / 0.22
+        var wave_radius: float = wave_progress * shockwave.max_radius
+        var wave_alpha: float = (1.0 - wave_progress) * 0.8
+        draw_arc(shockwave.position, wave_radius, 0.0, TAU, 32, Color(0.39, 0.82, 0.76, wave_alpha), 3.0 if wave_progress < 0.5 else 2.0)
     for number in damage_numbers:
         draw_damage_number(number)
     if player:

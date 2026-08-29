@@ -550,7 +550,10 @@ func update_enemies(delta: float) -> void:
                 projectiles.append({"position": enemy.position, "velocity": shot_direction * 210.0, "life": 3.0, "radius": 9.0, "damage": enemy.damage * 0.8, "color": Color("9fd6ff"), "kind": "oracle", "impact": false, "hostile": true})
                 play_sfx("oracle")
                 enemy.shot_timer = 2.4
-        if enemy.position.distance_to(player.position) < enemy.radius + 17.0: damage_player(enemy.damage * delta)
+        if enemy.position.distance_to(player.position) < enemy.radius + 17.0:
+            var contact_damage: float = enemy.damage * delta
+            damage_player(contact_damage)
+            if enemy.type == "LEECH": enemy.health = min(enemy.max_health, enemy.health + contact_damage * 0.6)
         if enemy.health <= 0.0:
             essence += enemy.essence
             run_kills += 1
@@ -560,6 +563,13 @@ func update_enemies(delta: float) -> void:
                 var scatter_angle: float = TAU * float(scatter_index) / 8.0
                 var scatter_velocity: float = 180.0 + randf_range(-40.0, 40.0)
                 death_debris.append({"position": enemy.position, "velocity": Vector2(cos(scatter_angle), sin(scatter_angle)) * scatter_velocity, "size": randf_range(2.0, 5.0), "color": MONSTERS[enemy.type].color, "life": 0.45})
+            if enemy.type == "SPLITTER" and not enemy.get("is_split", false):
+                for split_index in range(2):
+                    var split_angle: float = TAU * float(split_index) / 2.0 + randf_range(-0.3, 0.3)
+                    var split_position: Vector2 = enemy.position + Vector2(cos(split_angle), sin(split_angle)) * 14.0
+                    var split_health: float = enemy.max_health * 0.4
+                    enemies.append({"position": split_position, "type": "SPLITTER", "health": split_health, "max_health": split_health, "radius": enemy.radius * 0.65, "speed": enemy.speed * 1.15, "velocity": Vector2.ZERO, "damage": enemy.damage * 0.6, "essence": max(4, int(enemy.essence * 0.4)), "shot_timer": 1.5, "poison": 0.0, "slow": 0.0, "hit_flash": 0.0, "impulse": Vector2.ZERO, "is_split": true})
+                    spawn_ripples.append({"position": split_position, "radius": 0.0, "life": 0.4, "color": MONSTERS["SPLITTER"].color})
             enemies.erase(enemy)
             if enemy.type == "DREAD REGENT":
                 mode = "victory"

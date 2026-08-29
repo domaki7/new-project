@@ -69,6 +69,7 @@ var dash_flash := 0.0
 var dash_trail: Array[Dictionary] = []
 var mode := "start"
 var mouse_position := Vector2.ZERO
+var danger_proximity := 0.0
 var status := "UNARMED - COLLECT YOUR FIRST RELIC"
 var crown_coins := 0
 var run_kills := 0
@@ -267,7 +268,13 @@ func update_game(delta: float) -> void:
         spawn_enemy(); spawn_timer = max(0.2, 0.9 - wave * 0.1)
     if pickup_timer <= 0.0 and not weapon_family.is_empty() and pickups.size() < 5:
         spawn_pickup(); pickup_timer = 4.0
-    collect_pickups(); auto_cast(delta); update_projectiles(delta); update_enemies(delta)
+    collect_pickups(); auto_cast(delta); update_projectiles(delta)
+    danger_proximity = 0.0
+    for enemy in enemies:
+        var dist: float = enemy.position.distance_to(player.position)
+        var threat: float = max(0.0, 1.0 - dist / 160.0)
+        danger_proximity = max(danger_proximity, threat)
+    update_enemies(delta)
     if enemies.size() > 12 + wave * 3:
         var previous_wave: int = wave
         wave = min(5, wave + 1)
@@ -828,6 +835,10 @@ func _draw() -> void:
     draw_set_transform(shake_offset, 0.0, Vector2.ONE)
     var field := Rect2(Vector2.ZERO, ARENA_SIZE)
     draw_rect(field, Color("0b1425"))
+    if mode == "play" and danger_proximity > 0.0:
+        var danger_pulse: float = sin(elapsed * 8.0 + danger_proximity * PI) * 0.5 + 0.5
+        var danger_alpha: float = danger_proximity * (0.2 + danger_pulse * 0.15)
+        draw_rect(field, Color(0.85, 0.35, 0.3, danger_alpha))
     draw_circle(ARENA_SIZE * .5, 330.0, Color(0.12, 0.2, 0.34, .32))
     draw_circle(ARENA_SIZE * .5, 260.0, Color(0.22, 0.28, 0.34, .08))
     for x in range(0, int(ARENA_SIZE.x), 48): draw_line(Vector2(x, 0), Vector2(x, ARENA_SIZE.y), Color(1, 1, 1, 0.035))
@@ -846,6 +857,10 @@ func _draw() -> void:
         var ripple_alpha: float = ripple.life / 0.4 * 0.6
         draw_arc(ripple.position, ripple_radius, 0.0, TAU, 24, Color(ripple.color, ripple_alpha), 2.0)
     draw_polyline(PackedVector2Array([Vector2(26, 26), Vector2(ARENA_SIZE.x - 26, 26), Vector2(ARENA_SIZE.x - 26, ARENA_SIZE.y - 26), Vector2(26, ARENA_SIZE.y - 26), Vector2(26, 26)]), Color(0.93, .79, .4, .22), 2.0)
+    if mode == "play" and danger_proximity > 0.0:
+        var danger_pulse: float = sin(elapsed * 8.0 + danger_proximity * PI) * 0.5 + 0.5
+        var edge_color: Color = Color(0.85, 0.35, 0.3, danger_proximity * (0.3 + danger_pulse * 0.2))
+        draw_polyline(PackedVector2Array([Vector2(26, 26), Vector2(ARENA_SIZE.x - 26, 26), Vector2(ARENA_SIZE.x - 26, ARENA_SIZE.y - 26), Vector2(26, ARENA_SIZE.y - 26), Vector2(26, 26)]), edge_color, 4.0 if danger_proximity > 0.5 else 2.0)
     for pickup in pickups:
         var data: Dictionary = WEAPONS[pickup.name] if WEAPONS.has(pickup.name) else UPGRADES[pickup.name]
         var pickup_position: Vector2 = pickup.position + Vector2(0, sin(elapsed * 3.2 + pickup.position.x * 0.01) * 5.0)

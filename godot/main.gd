@@ -72,6 +72,7 @@ var mode := "start"
 var mouse_position := Vector2.ZERO
 var menu_transition := 0.0
 var menu_selection := 0
+var menu_hover_target := ""
 var danger_proximity := 0.0
 var status := "UNARMED - COLLECT YOUR FIRST RELIC"
 var crown_coins := 0
@@ -240,6 +241,7 @@ func start_game() -> void:
     mode = "play"
     menu_transition = 0.0
     menu_selection = 0
+    menu_hover_target = ""
     level = 1; essence = 0; wave = 1; boss_spawned = false; run_kills = 0; run_coins_earned = 0; player_hit_flash = 0.0; player_velocity = Vector2.ZERO; dash_cooldown = 0.0; dash_requested = false; dash_flash = 0.0; dash_trail.clear(); equipped.clear(); weapon_ranks.clear(); unlocked_nodes.clear(); weapon_cooldowns.clear(); weapon_swings.clear(); melee_impacts.clear(); enemy_bursts.clear(); projectile_impacts.clear(); damage_numbers.clear(); spawn_ripples.clear(); death_debris.clear(); dash_shockwaves.clear(); enemies.clear(); projectiles.clear(); pickups.clear();
     weapon_family = ""; spawn_timer = 0.0; pickup_timer = 0.0; ascension_options.clear()
     player = {"position": ARENA_SIZE * 0.5, "health": 85.0 + meta_health * 12.0, "max_health": 85.0 + meta_health * 12.0, "speed": 235.0}
@@ -515,6 +517,7 @@ func open_ascension() -> void:
     mode = "ascension"
     menu_transition = 1.0
     menu_selection = 0
+    menu_hover_target = ""
     essence -= 240
     ascension_flash = 0.45
     play_sfx("ascension")
@@ -555,13 +558,35 @@ func die() -> void:
     mode = "death"
     menu_transition = 1.0
     menu_selection = 0
+    menu_hover_target = ""
     run_coins_earned = max(5, essence / 12 + level * 3)
     crown_coins += run_coins_earned
     save_meta()
     status = "VESSEL LOST - %d CROWN COINS" % crown_coins
 
+func menu_target_at(position: Vector2) -> String:
+    if menu_transition >= 0.1: return ""
+    if mode == "start" and Rect2(Vector2(520, 406), Vector2(240, 48)).has_point(position): return "start"
+    if mode == "ascension":
+        for index in ascension_options.size():
+            if Rect2(ascension_positions[index] - Vector2(100, 44), Vector2(200, 88)).has_point(position): return "ascension_%d" % index
+    if mode == "death":
+        var shop_positions := [Vector2(280, 450), Vector2(640, 450), Vector2(1000, 450)]
+        var shop_costs := [30, 35, 25]
+        for index in shop_positions.size():
+            if crown_coins >= shop_costs[index] and Rect2(shop_positions[index] - Vector2(95, 35), Vector2(190, 70)).has_point(position): return "shop_%d" % index
+    return ""
+
 func _input(event: InputEvent) -> void:
-    if event is InputEventMouseMotion: mouse_position = event.position
+    if event is InputEventMouseMotion:
+        mouse_position = event.position
+        var hover_target := menu_target_at(mouse_position)
+        if hover_target != menu_hover_target:
+            menu_hover_target = hover_target
+            if not hover_target.is_empty():
+                play_sfx("ui_hover")
+                if hover_target.begins_with("ascension_"): menu_selection = int(hover_target.trim_prefix("ascension_"))
+                elif hover_target.begins_with("shop_"): menu_selection = int(hover_target.trim_prefix("shop_"))
     if event is InputEventKey and event.pressed and event.keycode == KEY_R:
         play_sfx("ui_select")
         start_game()

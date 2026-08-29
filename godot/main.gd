@@ -215,7 +215,7 @@ func update_hud() -> void:
     if hud_labels.is_empty(): return
     var dash_text: String = "DASH READY" if dash_cooldown <= 0.0 else "DASH %.1fs" % dash_cooldown
     hud_labels["stats"].text = "VESSEL %02d     ESSENCE %03d     WAVE %02d / 05     VITALITY %03d     %s" % [level, essence, wave, max(0, int(player.health)), dash_text]
-    var wave_goal: String = "REGENT APPROACHING" if wave >= 5 else "WAVE %02d: %d / %d KILLS" % [wave, run_kills, wave_kill_goal]
+    var wave_goal: String = "REGENT SUMMON: %d KILLS REMAINING" % max(0, wave_kill_goal - run_kills) if wave >= 5 and not boss_spawned else "WAVE %02d: %d / %d KILLS" % [wave, run_kills, wave_kill_goal]
     hud_labels["progress"].text = "ASCENSION: %d / %d ESSENCE     %s" % [essence, next_ascension_essence, wave_goal]
     hud_labels["status"].text = status
     var rites: Array[String] = []
@@ -322,7 +322,7 @@ func update_game(delta: float) -> void:
     if wave < 5 and run_kills >= wave_kill_goal:
         wave += 1
         wave_kill_goal += 10 + wave * 4
-        status = "WAVE %02d REACHED - THREATS ESCALATING" % wave
+        status = "WAVE 05 - GATHER ESSENCE TO SUMMON THE DREAD REGENT" if wave == 5 else "WAVE %02d REACHED - THREATS ESCALATING" % wave
         screen_shake = max(screen_shake, 0.06)
         spawn_ripples.append({"position": ARENA_SIZE * 0.5, "radius": 0.0, "life": 0.4, "color": Color("edc968")})
         play_sfx("wave")
@@ -336,7 +336,7 @@ func spawn_enemy() -> void:
     elif side == 2: position = Vector2(randf_range(0, ARENA_SIZE.x), -35)
     else: position = Vector2(randf_range(0, ARENA_SIZE.x), ARENA_SIZE.y + 35)
     var roll := randf(); var type := "WISP"
-    if wave >= 5 and not boss_spawned:
+    if wave >= 5 and not boss_spawned and run_kills >= wave_kill_goal:
         type = "DREAD REGENT"
         boss_spawned = true
         status = "THE DREAD REGENT HAS ENTERED THE ARENA"

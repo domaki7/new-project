@@ -576,6 +576,10 @@ func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
     elif enemy.type == "ORACLE":
         draw_circle(position, radius * 0.5, Color("101826"))
         draw_arc(position, radius * 0.52, elapsed * 0.9, elapsed * 0.9 + PI, 12, data.color, 2.0)
+        if enemy.shot_timer < 0.65 and enemy.position.distance_to(player.position) < 520.0:
+            var charge_ratio: float = 1.0 - enemy.shot_timer / 0.65
+            draw_arc(position, radius + 12.0 + charge_ratio * 8.0, -PI * 0.5, -PI * 0.5 + TAU * charge_ratio, 18, Color(0.62, 0.84, 1.0, 0.75), 3.0)
+            draw_circle(position, radius * (0.2 + charge_ratio * 0.12), Color(0.62, 0.84, 1.0, 0.22))
     var enemy_color: Color = Color("ffffff") if enemy.hit_flash > 0.0 else data.color
     var gaze: Vector2 = (player.position - position).normalized()
     var gaze_side: Vector2 = Vector2(-gaze.y, gaze.x)

@@ -295,6 +295,8 @@ func spawn_enemy() -> void:
         type = "DREAD REGENT"
         boss_spawned = true
         status = "THE DREAD REGENT HAS ENTERED THE ARENA"
+        screen_shake = max(screen_shake, 0.15)
+        play_sfx("victory")
     elif roll < 0.2: type = "BRUTE"
     elif roll < 0.36: type = "CHARGER"
     elif roll < 0.5: type = "SPLITTER"
@@ -526,6 +528,9 @@ func choose_ascension(index: int) -> void:
     elif UPGRADES.has(id): apply_upgrade(id)
     level += 1
     mode = "play"
+    ascension_flash = 0.5
+    screen_shake = max(screen_shake, 0.08)
+    play_sfx("ascension")
     status = "%s UNLOCKED - PATH EXPANDED" % id
 
 func damage_player(amount: float) -> void:

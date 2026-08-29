@@ -334,7 +334,10 @@ func update_game(delta: float) -> void:
     if wave < 5 and run_kills >= wave_kill_goal:
         wave += 1
         wave_kill_goal += 10 + wave * 4
-        status = "WAVE 05 - GATHER ESSENCE TO SUMMON THE DREAD REGENT" if wave == 5 else "WAVE %02d REACHED - THREATS ESCALATING" % wave
+        player.health = min(player.max_health, player.health + player.max_health * 0.12)
+        if not weapon_family.is_empty() and pickups.size() < 5:
+            spawn_pickup(player.position + Vector2(0, -115))
+        status = "WAVE 05 - GATHER ESSENCE TO SUMMON THE DREAD REGENT" if wave == 5 else "WAVE %02d REACHED - CROWN CACHE FOUND" % wave
         screen_shake = max(screen_shake, 0.06)
         spawn_ripples.append({"position": ARENA_SIZE * 0.5, "radius": 0.0, "life": 0.4, "color": Color("edc968")})
         play_sfx("wave")
@@ -364,7 +367,7 @@ func spawn_enemy() -> void:
     enemies.append({"position": position, "type": type, "health": health, "max_health": health, "radius": data.radius, "speed": data.speed + wave * 4.0, "velocity": Vector2.ZERO, "damage": data.damage, "essence": data.essence, "shot_timer": 1.5, "poison": 0.0, "slow": 0.0, "hit_flash": 0.0, "impulse": Vector2.ZERO})
     spawn_ripples.append({"position": position, "radius": 0.0, "life": 0.4, "color": data.color})
 
-func spawn_pickup() -> void:
+func spawn_pickup(reward_position: Vector2 = Vector2.ZERO) -> void:
     var options: Array[String] = []
     for weapon in WEAPONS:
         if weapon_family == WEAPONS[weapon].family and not equipped.has(weapon): options.append(weapon)
@@ -372,7 +375,10 @@ func spawn_pickup() -> void:
         if weapon_family == UPGRADES[upgrade].family and not unlocked_nodes.has(upgrade): options.append(upgrade)
     if options.is_empty(): return
     var id: String = options.pick_random()
-    pickups.append({"position": Vector2(randf_range(90, ARENA_SIZE.x - 90), randf_range(90, ARENA_SIZE.y - 90)), "name": id, "family": weapon_family, "life": 25.0})
+    var pickup_position: Vector2 = reward_position if reward_position != Vector2.ZERO else Vector2(randf_range(90, ARENA_SIZE.x - 90), randf_range(90, ARENA_SIZE.y - 90))
+    pickups.append({"position": pickup_position, "name": id, "family": weapon_family, "life": 25.0})
+    if reward_position != Vector2.ZERO:
+        spawn_ripples.append({"position": pickup_position, "radius": 0.0, "life": 0.4, "color": Color("edc968")})
 
 func collect_pickups() -> void:
     for pickup in pickups.duplicate():

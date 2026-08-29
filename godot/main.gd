@@ -141,6 +141,7 @@ func play_sfx(kind: String) -> void:
     elif kind == "wave": frequency = 150.0; duration = 0.22; volume = 0.12
     elif kind == "ascension": frequency = 520.0; duration = 0.28; volume = 0.14
     elif kind == "oracle": frequency = 180.0; duration = 0.16; volume = 0.11
+    elif kind == "storm": frequency = 240.0; duration = 0.2; volume = 0.14
     elif kind == "ui_hover": frequency = 540.0; duration = 0.08; volume = 0.08
     elif kind == "ui_select": frequency = 680.0; duration = 0.12; volume = 0.12
     var frame_count: int = int(44100.0 * duration)
@@ -478,8 +479,16 @@ func fire_weapon(id: String, target: Dictionary) -> void:
                 hit_stop = max(hit_stop, 0.018 if data.kind == "blade" else 0.032 if data.kind == "nova" else 0.014)
                 melee_impacts.append({"position": enemy.position, "style": data.style, "color": data.color, "life": 0.22, "angle": angle})
     elif data.kind == "storm":
+        play_sfx("storm")
+        enemy_bursts.append({"position": target.position, "color": data.color, "radius": 90.0, "life": 0.32})
         for enemy in enemies:
-            if enemy.position.distance_to(target.position) < 185.0: enemy.health -= power * 1.1
+            if enemy.position.distance_to(target.position) < 185.0:
+                var hit: float = power * 1.1
+                enemy.health -= hit
+                enemy.hit_flash = 0.14
+                damage_numbers.append({"position": enemy.position + Vector2(0, -enemy.radius - 8.0), "amount": int(hit), "color": data.color, "life": 0.55})
+        screen_shake = max(screen_shake, 0.03)
+        hit_stop = max(hit_stop, 0.02)
     elif data.kind == "meteor": projectiles.append({"position": target.position, "velocity": Vector2.ZERO, "life": 0.5, "radius": 48.0, "damage": power * 2.6, "color": data.color, "impact": true})
     else:
         play_sfx("ranged")

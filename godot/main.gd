@@ -611,6 +611,19 @@ func buy_meta(kind: String, cost: int) -> void:
     elif kind == "range": meta_range += 1
     save_meta()
 
+func draw_menu_backdrop(accent: Color) -> void:
+    var center := ARENA_SIZE * 0.5
+    var drift: float = sin(elapsed * 0.7) * 6.0
+    draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.025, 0.05, 0.1, 0.95))
+    draw_rect(Rect2(Vector2(28, 28), ARENA_SIZE - Vector2(56, 56)), Color(accent, 0.1), false, 1.0)
+    draw_rect(Rect2(Vector2(40, 40), ARENA_SIZE - Vector2(80, 80)), Color(0.65, 0.8, 0.78, 0.06), false, 1.0)
+    for radius in [180.0, 310.0, 465.0]:
+        draw_arc(center, radius + drift, elapsed * 0.12, elapsed * 0.12 + PI * 0.72, 40, Color(accent, 0.06), 1.0)
+        draw_arc(center, radius - drift, elapsed * -0.09 + PI, elapsed * -0.09 + PI * 1.72, 40, Color(accent, 0.04), 1.0)
+    for x in range(120, 1280, 160):
+        draw_line(Vector2(x, 55), Vector2(x - 80, 135), Color(accent, 0.035), 1.0)
+        draw_line(Vector2(x, 665), Vector2(x + 80, 585), Color(accent, 0.035), 1.0)
+
 func draw_monster(enemy: Dictionary, data: Dictionary) -> void:
     var position: Vector2 = enemy.position
     var radius: float = enemy.radius
@@ -973,11 +986,13 @@ func _draw() -> void:
         draw_knight()
         for index in equipped.size(): draw_equipped_weapon(equipped[index], index, equipped.size())
     if mode == "start":
-        draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, 0.95))
+        draw_menu_backdrop(Color("63d1c2"))
         var pulse: float = sin(elapsed * 2.0) * 0.15 + 0.85
         var transition_scale: float = 1.0 - menu_transition * 0.2
         var transition_alpha: float = 1.0 - menu_transition * 0.3
-        draw_circle(ARENA_SIZE * 0.5, 200.0, Color(0.39, 0.82, 0.76, pulse * 0.08 * transition_alpha))
+        draw_circle(ARENA_SIZE * 0.5, 210.0 + pulse * 8.0, Color(0.39, 0.82, 0.76, pulse * 0.07 * transition_alpha))
+        draw_arc(ARENA_SIZE * 0.5, 170.0, elapsed * 0.28, elapsed * 0.28 + PI * 1.6, 48, Color("63d1c2", transition_alpha * 0.3), 2.0)
+        draw_arc(ARENA_SIZE * 0.5, 185.0, -elapsed * 0.2 + PI, -elapsed * 0.2 + PI * 1.25, 48, Color("edc968", transition_alpha * 0.22), 1.0)
         var title_offset: float = menu_transition * -20.0
         draw_string(ThemeDB.fallback_font, Vector2(640, 240 + title_offset), "CROWN OF THE ABSOLUTE", HORIZONTAL_ALIGNMENT_CENTER, -1, int(42.0 * transition_scale), Color("f2f0d0", transition_alpha))
         draw_string(ThemeDB.fallback_font, Vector2(640, 290), "A roguelike ascension", HORIZONTAL_ALIGNMENT_CENTER, -1, 18, Color("63d1c2", transition_alpha * 0.8))
@@ -986,12 +1001,15 @@ func _draw() -> void:
         var button_hover: bool = button_rect.has_point(mouse_position) and menu_transition < 0.1
         var button_color: Color = Color("63d1c2") if button_hover else Color("9fd6ff")
         var button_bg: Color = Color("182d46", 0.6) if button_hover else Color("182d46", 0.4)
-        draw_rect(button_rect, button_bg * Color(1, 1, 1, transition_alpha))
-        draw_rect(button_rect, button_color * Color(1, 1, 1, transition_alpha), false, 2.0 if button_hover else 1.0)
+        var button_scale: float = 1.05 + sin(elapsed * 4.0) * 0.015 if button_hover else 1.0
+        var button_visual_rect := Rect2(button_rect.get_center() - button_rect.size * button_scale * 0.5, button_rect.size * button_scale)
+        draw_rect(button_visual_rect.grow(5), Color(button_color, 0.1 * transition_alpha))
+        draw_rect(button_visual_rect, button_bg * Color(1, 1, 1, transition_alpha))
+        draw_rect(button_visual_rect, button_color * Color(1, 1, 1, transition_alpha), false, 2.0 if button_hover else 1.0)
         draw_string(ThemeDB.fallback_font, Vector2(640, 445), "CLICK TO ENTER", HORIZONTAL_ALIGNMENT_CENTER, -1, 16, button_color * Color(1, 1, 1, transition_alpha))
         draw_string(ThemeDB.fallback_font, Vector2(640, 560), "Press R to restart  ·  Wave %d  ·  %d coins" % [wave, crown_coins], HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color("aebbb2", transition_alpha * 0.7))
     if mode == "ascension":
-        draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, 0.92))
+        draw_menu_backdrop(Color("63d1c2"))
         var transition_scale: float = 1.0 - menu_transition * 0.15
         var transition_alpha: float = 1.0 - menu_transition * 0.2
         if ascension_flash > 0.0: draw_circle(Vector2(640, 245), 120.0 - ascension_flash * 90.0, Color(0.39, 0.82, 0.76, ascension_flash * 0.12))
@@ -1000,20 +1018,24 @@ func _draw() -> void:
         for index in ascension_positions.size():
             var position: Vector2 = ascension_positions[index]
             if index < ascension_options.size():
-                var line_alpha: float = transition_alpha * 0.5
-                draw_line(Vector2(640, 245), position, Color(0.38, 0.5, 0.55, line_alpha), 2.0)
+                var card_delay: float = 0.1 + index * 0.12
+                var card_progress: float = clamp((1.0 - menu_transition) / card_delay, 0.0, 1.0)
+                var card_position: Vector2 = position + Vector2(0, (1.0 - card_progress) * 44.0)
+                var line_alpha: float = transition_alpha * card_progress * 0.5
+                draw_line(Vector2(640, 245), card_position, Color(0.38, 0.5, 0.55, line_alpha), 2.0)
                 var id: String = ascension_options[index]
                 var data: Dictionary = WEAPONS[id] if WEAPONS.has(id) else UPGRADES[id]
-                var option_rect := Rect2(position - Vector2(100, 44), Vector2(200, 88))
+                var option_rect := Rect2(card_position - Vector2(100, 44), Vector2(200, 88))
                 var option_hover: bool = option_rect.has_point(mouse_position) and menu_transition < 0.1
                 var option_focused: bool = index == menu_selection and menu_transition < 0.1
-                draw_rect(option_rect, Color("182d46", 0.5 * transition_alpha))
+                draw_rect(option_rect.grow(5), Color(data.color, 0.05 * card_progress))
+                draw_rect(option_rect, Color("182d46", 0.5 * transition_alpha * card_progress))
                 draw_rect(option_rect, data.color * Color(1, 1, 1, transition_alpha * (0.9 if option_hover or option_focused else 0.6)), false, 2.0 if option_hover or option_focused else 1.0)
-                if option_hover or option_focused: draw_circle(position, 120.0, Color(data.color, 0.05 * transition_alpha))
-                draw_string(ThemeDB.fallback_font, position + Vector2(-82, -12), id, HORIZONTAL_ALIGNMENT_LEFT, 164, int(13.0 * transition_scale), Color(data.color, transition_alpha))
-                draw_string(ThemeDB.fallback_font, position + Vector2(-82, 8), data.get("text", "upgrade"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2", transition_alpha * 0.8))
+                if option_hover or option_focused: draw_circle(card_position, 120.0, Color(data.color, 0.05 * transition_alpha))
+                draw_string(ThemeDB.fallback_font, card_position + Vector2(-82, -12), id, HORIZONTAL_ALIGNMENT_LEFT, 164, int(13.0 * transition_scale), Color(data.color, transition_alpha * card_progress))
+                draw_string(ThemeDB.fallback_font, card_position + Vector2(-82, 8), data.get("text", "upgrade"), HORIZONTAL_ALIGNMENT_LEFT, 164, 10, Color("aebbb2", transition_alpha * card_progress * 0.8))
     if mode == "death":
-        draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, 0.92))
+        draw_menu_backdrop(Color("ed725c"))
         var pulse: float = sin(elapsed * 1.5) * 0.1 + 0.9
         var transition_alpha: float = 1.0 - menu_transition * 0.15
         var transition_scale: float = 1.0 - menu_transition * 0.1
@@ -1042,7 +1064,7 @@ func _draw() -> void:
             draw_string(ThemeDB.fallback_font, item.pos + Vector2(-82, 20), "%d coins" % item.cost, HORIZONTAL_ALIGNMENT_LEFT, 164, 9, Color("edc968", item_alpha))
         draw_string(ThemeDB.fallback_font, Vector2(640, 600), "LEFT / RIGHT SELECT  ·  ENTER PURCHASE  ·  R NEW RUN", HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color("aebbb2", transition_alpha * 0.7))
     if mode == "victory":
-        draw_rect(Rect2(Vector2.ZERO, ARENA_SIZE), Color(0.04, 0.08, 0.15, 0.92))
+        draw_menu_backdrop(Color("edc968"))
         var pulse: float = sin(elapsed * 1.8) * 0.2 + 0.8
         var transition_alpha: float = 1.0 - menu_transition * 0.15
         var transition_scale: float = 1.0 - menu_transition * 0.1

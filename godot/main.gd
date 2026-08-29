@@ -1022,9 +1022,9 @@ func _draw() -> void:
         draw_arc(ARENA_SIZE * 0.5, 170.0, elapsed * 0.28, elapsed * 0.28 + PI * 1.6, 48, Color("63d1c2", transition_alpha * 0.3), 2.0)
         draw_arc(ARENA_SIZE * 0.5, 185.0, -elapsed * 0.2 + PI, -elapsed * 0.2 + PI * 1.25, 48, Color("edc968", transition_alpha * 0.22), 1.0)
         var title_offset: float = menu_transition * -20.0
-        draw_string(ThemeDB.fallback_font, Vector2(640, 240 + title_offset), "CROWN OF THE ABSOLUTE", HORIZONTAL_ALIGNMENT_CENTER, -1, int(42.0 * transition_scale), Color("f2f0d0", transition_alpha))
-        draw_string(ThemeDB.fallback_font, Vector2(640, 290), "A roguelike ascension", HORIZONTAL_ALIGNMENT_CENTER, -1, 18, Color("63d1c2", transition_alpha * 0.8))
-        draw_string(ThemeDB.fallback_font, Vector2(640, 360), "Collect relics  ·  Build your arsenal  ·  Face the Dread Regent", HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color("aebbb2", transition_alpha * 0.8))
+        draw_string(ThemeDB.fallback_font, Vector2(0, 240 + title_offset), "CROWN OF THE ABSOLUTE", HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), int(42.0 * transition_scale), Color("f2f0d0", transition_alpha))
+        draw_string(ThemeDB.fallback_font, Vector2(0, 290), "A roguelike ascension", HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), 18, Color("63d1c2", transition_alpha * 0.8))
+        draw_string(ThemeDB.fallback_font, Vector2(0, 360), "Collect relics  ·  Build your arsenal  ·  Face the Dread Regent", HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), 14, Color("aebbb2", transition_alpha * 0.8))
         var button_rect := Rect2(Vector2(640, 430) - Vector2(120, 24), Vector2(240, 48))
         var button_hover: bool = button_rect.has_point(mouse_position) and menu_transition < 0.1
         var button_color: Color = Color("63d1c2") if button_hover else Color("9fd6ff")
@@ -1034,8 +1034,8 @@ func _draw() -> void:
         draw_rect(button_visual_rect.grow(5), Color(button_color, 0.1 * transition_alpha))
         draw_rect(button_visual_rect, button_bg * Color(1, 1, 1, transition_alpha))
         draw_rect(button_visual_rect, button_color * Color(1, 1, 1, transition_alpha), false, 2.0 if button_hover else 1.0)
-        draw_string(ThemeDB.fallback_font, Vector2(640, 445), "CLICK TO ENTER", HORIZONTAL_ALIGNMENT_CENTER, -1, 16, button_color * Color(1, 1, 1, transition_alpha))
-        draw_string(ThemeDB.fallback_font, Vector2(640, 560), "Press R to restart  ·  Wave %d  ·  %d coins" % [wave, crown_coins], HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color("aebbb2", transition_alpha * 0.7))
+        draw_string(ThemeDB.fallback_font, Vector2(0, 445), "CLICK TO ENTER", HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), 16, button_color * Color(1, 1, 1, transition_alpha))
+        draw_string(ThemeDB.fallback_font, Vector2(0, 560), "Press R to restart  ·  Wave %d  ·  %d coins" % [wave, crown_coins], HORIZONTAL_ALIGNMENT_CENTER, int(ARENA_SIZE.x), 12, Color("aebbb2", transition_alpha * 0.7))
     if mode == "ascension":
         draw_menu_backdrop(Color("63d1c2"))
         var transition_scale: float = 1.0 - menu_transition * 0.15
